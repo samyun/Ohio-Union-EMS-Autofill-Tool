@@ -1,0 +1,8 @@
+{
+    "username": "name.#",
+    "password": "password",
+    "default_minutes_setup": 30,
+    "default_minutes_checkin": 15,
+    "default_minutes_teardown": 30,
+    "previous_day_setup_time": "10:00"
+}
