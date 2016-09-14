@@ -4,17 +4,16 @@
 # on a different platform (Windows/Linux), see README for manual installation.
 
 clear
-echo "Enter location to put files (default ~/EMSAutofill): "
-read LOCATION
+read -p "Enter location to put files (default ~/EMSAutofill): " -e LOCATION
 
 if [ ${#LOCATION} -eq 0 ]; then
     LOCATION="$HOME/EMSAutofill"
 fi
 
-if [ ! -d "$LOCATION" ]; then
-    mkdir $LOCATION
+if [ ! -d "`eval echo ${LOCATION//>}`" ]; then
+    mkdir "`eval echo ${LOCATION//>}`"
 fi
 
-cd $LOCATION
+cd "`eval echo ${LOCATION//>}`"
 
 echo $PWD
