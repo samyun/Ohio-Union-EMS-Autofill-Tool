@@ -255,6 +255,8 @@ def schedule_event(string js_command):
 
     # Enter assignments
 
+    # TODO: scroll into view? 
+
 def enter_assignment(string person, string time, string assignment):
     """ From the event details page, enters the staff assignments, submit,
     check for errors, and check it was entered.
