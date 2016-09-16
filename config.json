@@ -3,40 +3,27 @@
     "day": 15,
     "year": 2016,
 
-    "managers": {
-        "count": 1,
-        "manager_1": {
+    "managers": [
+        {
             "last_name": "Buckeye",
             "first_name": "Brutus",
             "start_time": "6:00",
             "end_time": "14:30"
         }
-    },
+    ],
 
-    "leads": {
-        "count": 1,
-        "lead_1": {
-            "last_name": "Buckeye",
-            "first_name": "Brutus",
-            "start_time": "6:00",
-            "end_time": "14:30"
-        }
-    },
-
-    "tech": {
-        "count": 2,
-        "tech_1": {
+    "leads": [
+        {
             "last_name": "Buckeye",
             "first_name": "Brutus",
             "start_time": "6:00",
             "end_time": "14:30"
         },
-
-        "tech_2": {
+        {
             "last_name": "Buckeye",
             "first_name": "Brutus",
             "start_time": "6:00",
             "end_time": "14:30"
         }
-    }
+    ]
 }
