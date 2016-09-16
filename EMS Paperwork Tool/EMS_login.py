@@ -1,14 +1,16 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 import time
-import getpass
 import sys
 import os
 import json
+import pdb
 
-#global variables
-settings, config = ()
+# global variables
+settings, config = (), ()
 driver = webdriver.Chrome()
+
 
 def validate_date():
     """ Validates date in config.json file and formats it
@@ -32,7 +34,7 @@ def validate_date():
         raise ValueError("Day '{}' is invalid. Check config.json. ".format(config["day"]))
 
     try:
-        elif int(config["year"]) < 0 or int(config["year"]) > 2099 or (int(config["year"]) < 2000 and int(config["year"]) > 99):
+        if int(config["year"]) < 0 or int(config["year"]) > 2099 or 99 < int(config["year"]) < 2000:
             raise ValueError
     except ValueError:
         driver.close()
@@ -40,47 +42,23 @@ def validate_date():
 
     # if two digit year, convert to 4 digit year.
     if config["year"] < 2000:
-        config["year"] = config["year"] + 2000
-
-    if config["month"] == "1":
-        name_month = "Jan"
-    elif config["month"] == "2":
-        name_month = "Feb"
-    elif config["month"] == "3":
-        name_month = "Mar"
-    elif config["month"] == "4":
-        name_month = "Apr"
-    elif config["month"] == "5":
-        name_month = "May"
-    elif config["month"] == "6":
-        name_month = "Jun"
-    elif config["month"] == "7":
-        name_month = "Jul"
-    elif config["month"] == "8":
-        name_month = "Aug"
-    elif config["month"] == "9":
-        name_month = "Sep"
-    elif config["month"] == "10":
-        name_month = "Oct"
-    elif config["month"] == "11":
-        name_month = "Nov"
-    else:
-        name_month = "Dec"
+        config["year"] += 2000
 
     return str(config["month"]) + "/" + str(config["day"]) + "/" + str(config["year"])
 
+
 def navigate_to_event_listing_page():
     # Navigate to EMS
-    driver.get('http://ohiounion.osu.edu/ems');
+    driver.get('http://ohiounion.osu.edu/ems')
 
     # If not logged in, log in.
     if driver.title == "Login Required | The Ohio State University":
-        inputUser = driver.find_element_by_css_selector(".username")
-        inputUser.send_keys(input_ems_username);
+        input_user = driver.find_element_by_css_selector("#username")
+        input_user.send_keys(settings["username"])
 
-        inputPass = driver.find_element_by_css_selector(".password")
-        inputPass.send_keys(input_ems_password);
-        inputPass.send_keys(u'\ue007');
+        input_pass = driver.find_element_by_css_selector("#password")
+        input_pass.send_keys(settings["password"])
+        input_pass.send_keys(u'\ue007')
 
     if driver.title == "Login Required | The Ohio State University":
         raise RuntimeError("Invalid EMS credentials")
@@ -94,6 +72,7 @@ def navigate_to_event_listing_page():
     except NoSuchElementException:
         driver.close()
         raise NoSuchElementException("You must be an AV Manager to use this tool.")
+
 
 def setup():
     """ Performs setup for the script.
@@ -124,14 +103,14 @@ def setup():
 
     # open settings file
     with open('settings.json', 'r') as settings_file:
-        settings_json=settings_file.read()
+        settings_json = settings_file.read()
         global settings
         settings = json.loads(settings_json)
         settings_file.close()
 
     # open config file
     with open('config.json', 'r') as config_file:
-        config_json=config_file.read()
+        config_json = config_file.read()
         global config
         config = json.loads(config_json)
         config_file.close()
@@ -142,46 +121,47 @@ def setup():
     navigate_to_event_listing_page()
 
     # Go to date
-    datePicker = driver.find_element_by_css_selector(".ctl00_ContentPlaceHolder1_txt_date").clear()
-    datePicker.send_keys(formatted_date)
+    date_picker = driver.find_element_by_css_selector(".ctl00_ContentPlaceHolder1_txt_date").clear()
+    date_picker.send_keys(formatted_date)
     driver.find_element_by_css_selector(".ctl00_ContentPlaceHolder1_btn_submit").click()
+
 
 def get_list_of_events():
     """ From the "Ohio Union Daily AV Setup Schedule" page, gets each pair of
     rows and returns them
 
     Returns:
-        list_of_events: A list containing 2-tuples with the two rows for an event
+        list_events: A list containing 2-tuples with the two rows for an event
     """
 
     # Get rows
     list_of_rows = driver.find_elements_by_css_selector("#table-responsive > table > tbody > tr")
     list_of_rows.pop(0)
-    num_rows = len(list_of_rows)
 
     # split rows into events
-    list_of_events = []
-    for first_row, second_row in zip(list_of_rows[0::2], list_of_rows[1::2]):
-        list_of_events.append((first_row, second_row))
+    list_events = []
+    for row_1, row_2 in zip(list_of_rows[0::2], list_of_rows[1::2]):
+        list_events.append((row_1, row_2))
 
-    return list_of_events
+    return list_events
 
-def get_list_of_javascript(list list_of_events):
+
+def get_list_of_javascript(event_list):
     """ Takes a list of events (from get_list_of_events()) and pulls the
     javascript calls to navigate to the event detail page for each event.
     Uses "skip_already_confirmed", "skip_already_scheduled", "skip_rooms",
     and "skip_following_rooms" in settings.json
 
     Args:
-        list_of_events (list): List containing 2-tuples that are the first and
+        event_list (list): List containing 2-tuples that are the first and
         second rows of each event
 
     Returns:
-        list_of_javascript (list): List containing strings that are the js calls
+        js_list (list): List containing strings that are the js calls
     """
 
-    list_of_javascript = []
-    for tup in list_of_events:
+    js_list = []
+    for tup in event_list:
         first_row = tup[0]
         second_row = tup[1]
 
@@ -191,7 +171,7 @@ def get_list_of_javascript(list list_of_events):
             checkin_time = first_row.find_element_by_css_selector("td:nth-of-type(8)")
             teardown_time = first_row.find_element_by_css_selector("td:nth-of-type(9)")
 
-            if setup_time != "&nbsp" or checkin_time != "&nbsp" or teardown_time != "&nbsp"
+            if setup_time != "&nbsp" or checkin_time != "&nbsp" or teardown_time != "&nbsp":
                 break
 
         # check if already confirmed
@@ -200,7 +180,7 @@ def get_list_of_javascript(list list_of_events):
             checkin_confirm = second_row.find_element_by_css_selector("td:nth-of-type(5)")
             teardown_confirm = second_row.find_element_by_css_selector("td:nth-of-type(6)")
 
-            if setup_confirm != "Confirmed" or checkin_confirm != "Confirmed" or teardown_confirm != "Confirmed"
+            if setup_confirm != "Confirmed" or checkin_confirm != "Confirmed" or teardown_confirm != "Confirmed":
                 break
 
         # check if skip rooms
@@ -210,13 +190,14 @@ def get_list_of_javascript(list list_of_events):
                 break
 
         # get javascript command to go to page
-        command = first_row.find_element_by_css_selector("td:nth-of-type(5) > a").get_attribute("href")
-        splitted_command = command.split(:)
-        list_of_javascript.append(splitted_command[1])
+        js_command = first_row.find_element_by_css_selector("td:nth-of-type(5) > a").get_attribute("href")
+        splitted_command = js_command.split(":")
+        js_list.append(splitted_command[1])
 
-    return list_of_javascript
+    return js_list
 
-def schedule_event(string js_command):
+
+def schedule_event(js_command):
     """ Takes the javascript command to navigate to the event page from the
     "Ohio Union Daily AV Setup Schedule" page. Schedules the event based on
     input from config.json. Also uses "skip_events_with_no_av" to skip events
@@ -240,7 +221,7 @@ def schedule_event(string js_command):
     title = driver.title
     if title != "EMS - Event Details Page":
         driver.close()
-        raise RuntimeError("After calling '{}', page wasn't on the Event Details Page. Title was '{}'".format(title))
+        raise RuntimeError("Page wasn't on the Event Details Page. Title was '{}'".format(title))
 
     # get the time for the event and parse it
     time_for_event = driver.find_element_by_css_selector("#spRunTime").text
@@ -255,9 +236,10 @@ def schedule_event(string js_command):
 
     # Enter assignments
 
-    # TODO: scroll into view? 
+    # TODO: scroll into view?
 
-def enter_assignment(string person, string time, string assignment):
+
+def enter_assignment(person, time, assignment):
     """ From the event details page, enters the staff assignments, submit,
     check for errors, and check it was entered.
 
@@ -273,7 +255,7 @@ def enter_assignment(string person, string time, string assignment):
     driver.find_element_by_css_selector("#ctl00_ContentPlaceHolder1_btn_add_staff_assignments").click()
 
 
-def find_setup_info(string event_start_time):
+def find_setup_info(event_start_time):
     """ Given an event start time, find the correct person to setup the event
     and when to setup the event.
 
@@ -296,7 +278,7 @@ def find_setup_info(string event_start_time):
     setup_time = get_setup_time(event_start_time)
     if setup_time == "12:00 AM":
         staff = settings["last_name"] + ", " + settings["first_name"]
-        return (staff, setup_time)
+        return staff, setup_time
 
     found = False
     person = None
@@ -317,9 +299,10 @@ def find_setup_info(string event_start_time):
         return None
     else:
         name = person["last_name"] + ", " + person["first_name"]
-        return (name, setup_time)
+        return name, setup_time
 
-def find_checkin_info(string event_start_time):
+
+def find_checkin_info(event_start_time):
     """ Given an event start time, find the correct person to check-in the
     event and when to check-in the event.
 
@@ -361,9 +344,10 @@ def find_checkin_info(string event_start_time):
         return None
     else:
         name = person["last_name"] + ", " + person["first_name"]
-        return (name, checkin_time)
+        return name, checkin_time
 
-def find_teardown_info(string event_end_time):
+
+def find_teardown_info(event_end_time):
     """ Given an event end time, find the correct person to teardown the
     event and when to teardown the event.
 
@@ -405,9 +389,10 @@ def find_teardown_info(string event_end_time):
         return None
     else:
         name = person["last_name"] + ", " + person["first_name"]
-        return (name, teardown_time)
+        return name, teardown_time
 
-def parse_time(string time):
+
+def parse_time(time):
     """ Parse a time in the format '12:00 AM' into three parts: hour, minute,
     AM/PM.
 
@@ -425,9 +410,10 @@ def parse_time(string time):
     time_second_number = int(time_number_part_split[1])
     time_ampm_part = time_split[1]
 
-    return (time_first_number, time_second_number, time_ampm_part)
+    return time_first_number, time_second_number, time_ampm_part
 
-def compare_times(string time_1, string time_2):
+
+def compare_times(time_1, time_2):
     """ Given two times, compares them.
 
     Args:
@@ -461,10 +447,11 @@ def compare_times(string time_1, string time_2):
             elif time_1_second_part > time_2_second_part:
                 return 1
             else:
-                #same second part
+                # same second part
                 return 0
 
-def get_setup_time(string event_start_time):
+
+def get_setup_time(event_start_time):
     """ Given the event start time, find the setup time based on the
     delays/advances in settings.json
 
@@ -491,23 +478,24 @@ def get_setup_time(string event_start_time):
     # cover unlikely event of 12+ hour delays
     extra_ampm_flips = i/12
     time_first_number += 12 * extra_ampm_flips
-    if ampm_flips % 2 == 1:
+    if extra_ampm_flips % 2 == 1:
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     while time_first_number <= 0:
         time_first_number += 12
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     # return new time
     return str(time_first_number) + ":" + str(time_second_number) + " " + time_ampm_part
 
-def get_checkin_time(string event_start_time):
+
+def get_checkin_time(event_start_time):
     """ Given the event start time, find the check-in time based on the
     delays/advances in settings.json
 
@@ -531,23 +519,24 @@ def get_checkin_time(string event_start_time):
     # cover unlikely event of 12+ hour delays
     extra_ampm_flips = i/12
     time_first_number += 12 * extra_ampm_flips
-    if ampm_flips % 2 == 1:
+    if extra_ampm_flips % 2 == 1:
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     while time_first_number <= 0:
         time_first_number += 12
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     # return new time
     return str(time_first_number) + ":" + str(time_second_number) + " " + time_ampm_part
 
-def get_teardown_time(string event_end_time):
+
+def get_teardown_time(event_end_time):
     """ Given the event end time, find the teardown time based on the
     delays/advances in settings.json
 
@@ -571,23 +560,24 @@ def get_teardown_time(string event_end_time):
     # cover unlikely event of 12+ hour delays
     extra_ampm_flips = i/12
     time_first_number += 12 * extra_ampm_flips
-    if ampm_flips % 2 == 1:
+    if extra_ampm_flips % 2 == 1:
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     while time_first_number > 0:
         time_first_number -= 12
         if time_ampm_part == "AM":
-            time_ampm_part == "PM"
+            time_ampm_part = "PM"
         else:
-            time_ampm_part == "AM"
+            time_ampm_part = "AM"
 
     # return new time
     return str(time_first_number) + ":" + str(time_second_number) + " " + time_ampm_part
 
-def select_staff(string staff):
+
+def select_staff(staff):
     """ Selects the person with name 'staff' in the Staff Assignment form
 
     Args:
@@ -604,7 +594,8 @@ def select_staff(string staff):
         driver.close()
         raise NoSuchElementException("'{}' wasn't found in the list of staff".format(staff))
 
-def select_assignment(string assignment):
+
+def select_assignment(assignment):
     """ Selects the assignment 'assignment' in the Staff Assignment form
 
     Args:
@@ -621,7 +612,8 @@ def select_assignment(string assignment):
         driver.close()
         raise NoSuchElementException("'{}' wasn't found in the list of assignments".format(assignment))
 
-def enter_time(string time):
+
+def enter_time(time):
     """ Enters the time 'time' in the Staff Assignment form. Assumes 'time' is
     correctly formatted.
 
@@ -632,14 +624,14 @@ def enter_time(string time):
     time_split = time.split(" ")
 
     text_box = driver.find_element_by_css_selector("#ctl00_ContentPlaceHolder1_txt_start_time")
-    text_box.send_keys(time[0])
+    text_box.send_keys(time_split[0])
 
     try:
         select = Select(driver.find_element_by_css_selector("#ctl00_ContentPlaceHolder1_ddl_start_time"))
         select.select_by_visible_text(time[1])
     except NoSuchElementException:
         driver.close()
-        raise NoSuchElementException("'{}' wasn't found in the list of AM/PM".format(time[1]))
+        raise NoSuchElementException("'{}' wasn't found in the list of AM/PM".format(time_split[1]))
 
 # Setup environment and get the webdriver
 setup()
@@ -648,16 +640,14 @@ setup()
 list_of_events = get_list_of_events()
 
 # get list of javascript commands
-list_of_javascript = get_list_of_javascript (list_of_events)
+list_of_javascript = get_list_of_javascript(list_of_events)
+
+pdb.set_trace()
 
 # go to event and schedule
-for command in list_of_javascript
+for command in list_of_javascript:
 
     driver.execute_script(command)
-
-
-
-
 
 time.sleep(30)
 
