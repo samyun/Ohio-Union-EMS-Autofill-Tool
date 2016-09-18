@@ -9,7 +9,7 @@ import time
 import sys
 import os
 import json
-import pdb
+import datetime
 
 # global variables
 settings = dict()
@@ -308,14 +308,16 @@ def schedule_event(js_command):
     # get the time for the event and parse it
     time_for_event = wait_for_element_visible("#spRunTime").text
     time_for_event_split = time_for_event.split(' - ')
-    event_start = time_for_event_split[0]
-    event_end = time_for_event_split[1]
+    event_start_time = time_for_event_split[0]
+    event_end_time = time_for_event_split[1]
+
+    event_start_dt, event_end_dt = convert_times_to_datetime(event_start_time, event_end_time)
 
     # get assignment info
     try:
-        setup_person, setup_time = find_setup_info(event_start)
-        checkin_person, checkin_time = find_checkin_info(event_start)
-        teardown_person, teardown_time = find_teardown_info(event_end)
+        setup_person, setup_time = find_setup_info(event_start_dt)
+        checkin_person, checkin_time = find_checkin_info(event_start_dt)
+        teardown_person, teardown_time = find_teardown_info(event_end_dt)
     except TypeError:
         return
 
@@ -325,19 +327,19 @@ def schedule_event(js_command):
     assign_teardown(teardown_person, teardown_time)
 
 
-def enter_assignment(person, time, assignment):
+def enter_assignment(person, time_to_enter, assignment):
     """ From the event details page, enters the staff assignments, submit,
     check for errors, and check it was entered.
 
     Args:
         person (str): name of staff to assign (in format 'Last, First')
-        time (str): time to assign (in format '12:00 AM')
+        time_to_enter (str): time to assign (in format '12:00 AM')
         assignment (str): assignment. Valid types are: 'Setup', 'Check-In',
             'Teardown'
     """
     select_staff(person)
     select_assignment(assignment)
-    enter_time(time)
+    enter_time(time_to_enter)
     wait_for_element_visible("#ctl00_ContentPlaceHolder1_btn_add_staff_assignments").click()
 
     # check assigned correctly
@@ -350,7 +352,7 @@ def enter_assignment(person, time, assignment):
             staff_name = row.find_element_by_css_selector("td:nth-of-type(2)").text
             if person in staff_name:
                 assign_time = row.find_element_by_css_selector("td:nth-of-type(3)").text
-                if time in assign_time:
+                if time_to_enter in assign_time:
                     found = True
                     break
 
@@ -359,34 +361,34 @@ def enter_assignment(person, time, assignment):
                            (person, assignment, time))
 
 
-def assign_setup(person, time):
+def assign_setup(person, setup_time):
     """ Assigns the setup to the given person at the given time.
 
     Args:
-        person (str): Person to assign. Format 'Last, First'
-        time (str): Time to assign. Format '12:00 AM'
+        person (str): Person to assign setup. Format 'Last, First'
+        setup_time (str): Time to assign setup. Format '12:00 AM'
     """
-    enter_assignment(person, time, "Setup")
+    enter_assignment(person, setup_time, "Setup")
 
 
-def assign_checkin(person, time):
+def assign_checkin(person, checkin_time):
     """ Assigns the check-in to the given person at the given time.
 
     Args:
-        person (str): Person to assign. Format 'Last, First'
-        time (str): Time to assign. Format '12:00 AM'
+        person (str): Person to assign to check-in. Format 'Last, First'
+        checkin_time (str): Time to assign to check-in. Format '12:00 AM'
     """
-    enter_assignment(person, time, "Check-In")
+    enter_assignment(person, checkin_time, "Check-In")
 
 
-def assign_teardown(person, time):
+def assign_teardown(person, teardown_time):
     """ Assigns the teardown to the given person at the given time.
 
     Args:
-        person (str): Person to assign. Format 'Last, First'
-        time (str): Time to assign. Format '12:00 AM'
+        person (str): Person to assign to teardown. Format 'Last, First'
+        teardown_time (str): Time to assign to teardown. Format '12:00 AM'
     """
-    enter_assignment(person, time, "Teardown")
+    enter_assignment(person, teardown_time, "Teardown")
 
 
 def find_setup_info(event_start_time):
@@ -401,7 +403,7 @@ def find_setup_info(event_start_time):
     that manager. If nobody fits, nobody is assigned to that shift.
 
     Args:
-        event_start_time (str): Time the event starts (in the format '12:00 AM')
+        event_start_time (datetime.datetime): Time the event starts
 
     Returns:
         setup_info (2-tuple): First element is the name of person (in the
@@ -409,7 +411,8 @@ def find_setup_info(event_start_time):
         format '12:00 AM'). If nobody can be assigned to the setup, return None
     """
 
-    setup_time = get_setup_time(event_start_time)
+    setup_dt = get_setup_time(event_start_time)
+    setup_time = convert_datetime_to_time(setup_dt)
     if setup_time == "12:00 AM":
         staff = settings["last_name"] + ", " + settings["first_name"]
         return staff, setup_time
@@ -417,15 +420,16 @@ def find_setup_info(event_start_time):
     found = False
     person = None
     for lead in config["leads"]:
-
-        if compare_times(lead["start_time"], setup_time) <= 0 and compare_times(lead["end_time"], setup_time) == 1:
+        start_time, end_time = convert_times_to_datetime(lead["start_time"], lead["end_time"])
+        if compare_times(start_time, setup_dt) <= 0 and compare_times(end_time, setup_dt) == 1:
             found = True
             person = lead
             break
 
     if not found:
         for manager in config["managers"]:
-            if compare_times(manager["start_time"], setup_time) <= 0 and compare_times(manager["end_time"], setup_time) == 1:
+            start_time, end_time = convert_times_to_datetime(manager["start_time"], manager["end_time"])
+            if compare_times(start_time, setup_dt) <= 0 and compare_times(end_time, setup_dt) == 1:
                 found = True
                 person = manager
                 break
@@ -449,7 +453,7 @@ def find_checkin_info(event_start_time):
     assigned to that manager. If nobody fits, nobody is assigned to that shift.
 
     Args:
-        event_start_time (str): Time the event starts (in the format '12:00 AM')
+        event_start_time (datetime.datetime): Time the event starts (in the format '12:00 AM')
 
     Returns:
         checkin_info (2-tuple): First element is the name of person (in the
@@ -458,19 +462,22 @@ def find_checkin_info(event_start_time):
         None
     """
 
-    checkin_time = get_checkin_time(event_start_time)
+    checkin_dt = get_checkin_time(event_start_time)
+    checkin_time = convert_datetime_to_time(checkin_dt)
 
     found = False
     person = None
     for lead in config["leads"]:
-        if compare_times(lead["start_time"], checkin_time) <= 0 and compare_times(lead["end_time"], checkin_time) == 1:
+        start_time, end_time = convert_times_to_datetime(lead["start_time"], lead["end_time"])
+        if compare_times(start_time, checkin_dt) <= 0 and compare_times(end_time, checkin_dt) == 1:
             found = True
             person = lead
             break
 
     if not found:
         for manager in config["managers"]:
-            if compare_times(manager["start_time"], checkin_time) <= 0 and compare_times(manager["end_time"], checkin_time) == 1:
+            start_time, end_time = convert_times_to_datetime(manager["start_time"], manager["end_time"])
+            if compare_times(start_time, checkin_dt) <= 0 and compare_times(end_time, checkin_dt) == 1:
                 found = True
                 person = manager
                 break
@@ -494,7 +501,7 @@ def find_teardown_info(event_end_time):
     assigned to that manager. If nobody fits, nobody is assigned to that shift.
 
     Args:
-        event_end_time (str): Time the event ends (in the format '12:00 AM')
+        event_end_time (datetime.datetime): Time the event ends (in the format '12:00 AM')
 
     Returns:
         teardown_info (2-tuple): First element is the name of person (in the
@@ -503,31 +510,22 @@ def find_teardown_info(event_end_time):
         None
     """
 
-    teardown_time = get_teardown_time(event_end_time)
+    teardown_dt = get_teardown_time(event_end_time)
+    teardown_time = convert_datetime_to_time(teardown_dt)
 
     found = False
     person = None
     for lead in config["leads"]:
-
-        # if lead ends after 12:00 AM, treat as 11:50 PM
-        if compare_times("12:00 AM", lead["end_time"]) >= 0:
-            lead["end_time"] = "11:59 PM"
-
-        if compare_times(lead["start_time"], teardown_time) <= 0 and compare_times(lead["end_time"],
-                                                                                   teardown_time) == 1:
+        start_time, end_time = convert_times_to_datetime(lead["start_time"], lead["end_time"])
+        if compare_times(start_time, teardown_dt) <= 0 and compare_times(end_time, teardown_dt) == 1:
             found = True
             person = lead
             break
 
     if not found:
         for manager in config["managers"]:
-
-            # if manager ends after 12:00 AM, treat as 11:50 PM
-            if compare_times("12:00 AM", manager["end_time"]) >= 0:
-                manager["end_time"] = "11:59 PM"
-
-            if compare_times(manager["start_time"], teardown_time) <= 0 and compare_times(manager["end_time"],
-                                                                                          teardown_time) == 1:
+            start_time, end_time = convert_times_to_datetime(manager["start_time"], manager["end_time"])
+            if compare_times(start_time, teardown_dt) <= 0 and compare_times(end_time, teardown_dt) == 1:
                 found = True
                 person = manager
                 break
@@ -539,19 +537,19 @@ def find_teardown_info(event_end_time):
         return name, teardown_time
 
 
-def parse_time(time):
+def parse_time(time_to_parse):
     """ Parse a time in the format '12:00 AM' into three parts: hour, minute,
     AM/PM.
 
     Args:
-        time (str): time in format '12:00 AM'
+        time_to_parse (str): time in format '12:00 AM'
 
     Returns:
         parsed_time (3-tuple): first element is the hour as an int, second
             element is the minute as an int, and third element is the AM/PM as a str
     """
 
-    time_split = time.split(' ')
+    time_split = time_to_parse.split(' ')
     time_number_part_split = time_split[0].split(':')
     time_first_number = int(time_number_part_split[0])
     time_second_number = int(time_number_part_split[1])
@@ -560,12 +558,87 @@ def parse_time(time):
     return time_first_number, time_second_number, time_ampm_part
 
 
-def compare_times(time_1, time_2):
-    """ Given two times, compares them.
+def convert_times_to_datetime(start_time, end_time):
+    """ Given a start and end time, converts the two times to DateTime objects.
 
     Args:
-        time_1 (str): first time (in the format '12:00 AM')
-        time_2 (str): second time (in the format '12:00 AM')
+        start_time (str): Start time. In the form '12:00 AM'
+        end_time (str): End time. In the form '12:00 AM'
+
+    Returns:
+        start_time_dt (datetime.datetime): Start time as a datetime.
+        end_time_dt (datetime.datetime): End time as a datetime.
+    """
+
+    start_time_first_part, start_time_second_part, start_time_ampm_part = parse_time(start_time)
+    end_time_first_part, end_time_second_part, end_time_ampm_part = parse_time(end_time)
+
+    if start_time_ampm_part == "AM":
+        start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part, start_time_second_part)
+    else:
+        start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part + 12, start_time_second_part)
+
+    if end_time_ampm_part == "AM" and start_time_ampm_part == "AM":
+        end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part, end_time_second_part)
+    elif end_time_ampm_part == "AM" and start_time_ampm_part == "PM":
+        end_time_dt = datetime.datetime(2016, 1, 2, end_time_first_part, end_time_second_part)
+    else:
+        end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part + 12, end_time_second_part)
+
+    return start_time_dt, end_time_dt
+
+
+def convert_time_to_datetime(t1):
+    """ Given a time, converts it to DateTime object.
+
+    Args:
+        t1 (str): time. In the form '12:00 AM'
+
+    Returns:
+        t1_dt (datetime.datetime): Start time as a datetime.
+    """
+
+    time_first_part, time_second_part, time_ampm_part = parse_time(t1)
+
+    if time_ampm_part == "AM":
+        t1_dt = datetime.datetime(2016, 1, 1, time_first_part, time_second_part)
+    else:
+        t1_dt = datetime.datetime(2016, 1, 1, time_first_part + 12, time_second_part)
+
+    return t1_dt
+
+
+def convert_datetime_to_time(t1):
+    """ Given a datetime, converts it to time.
+
+    Args:
+        t1 (datetime.datetime): datetime.
+
+    Returns:
+        t1_time (str): time. In the form '12:00 AM'
+    """
+
+    hour = t1.time().hour
+    minute = t1.time().minute
+
+    if hour > 12:
+        hour -= 12
+        ampm = "PM"
+    else:
+        ampm = "AM"
+
+    if minute < 10:
+        return str(hour) + ":0" + str(minute) + " " + ampm
+    else:
+        return str(hour) + ":" + str(minute) + " " + ampm
+
+
+def compare_times(time_1, time_2):
+    """ Given two times, compares them. Times must have come from convert_times_to_datetime
+
+    Args:
+        time_1 (datetime.datetime): first time
+        time_2 (datetime.datetime): second time
 
     Returns:
         -1: time_1 is before time_2
@@ -573,223 +646,59 @@ def compare_times(time_1, time_2):
         1 : time_1 is after time_2
     """
 
-    time_1_first_part, time_1_second_part, time_1_ampm_part = parse_time(time_1)
-    time_2_first_part, time_2_second_part, time_2_ampm_part = parse_time(time_2)
-
-    if time_1_ampm_part == 'AM' and time_2_ampm_part == 'PM':
+    if time_1 < time_2:
         return -1
-    elif time_1_ampm_part == 'PM' and time_2_ampm_part == 'AM':
+    elif time_2 < time_1:
         return 1
     else:
-        # same ampm, different number
-
-        if time_1_first_part < time_2_first_part:
-            return -1
-        elif time_1_first_part > time_2_first_part:
-            return 1
-        else:
-            # same first part
-            if time_1_second_part < time_2_second_part:
-                return -1
-            elif time_1_second_part > time_2_second_part:
-                return 1
-            else:
-                # same second part
-                return 0
+        return 0
 
 
 def get_setup_time(event_start_time):
-    """ Given the event start time, find the setup time based on the
-    delays/advances in settings.json
+    """ Given the event start time, find the setup time based on the delays/advances in settings.json
 
     Args:
-        event_start_time (str): event start time (in the format '12:00 AM')
+        event_start_time (datetime.datetime): event start time
 
     Returns:
-        setup_time (str): time to setup for event (in format '12:00 AM')
+        setup_time (datetime.datetime): time to setup for event
     """
-    if compare_times(settings["previous_day_setup_cutoff"], event_start_time) == 1:
+    if compare_times(convert_time_to_datetime(settings["previous_day_setup_cutoff"]), event_start_time) == 1:
         return "12:00 AM"
 
-    time_first_number, time_second_number, time_ampm_part = parse_time(event_start_time)
+    time_delta = datetime.timedelta(minutes=settings["minutes_to_advance_setup"])
 
-    time_second_number -= settings["minutes_to_advance_setup"]
-
-    i = 0
-    while time_second_number < 0:
-        time_second_number += 60
-        time_first_number -= 1
-        i += 1
-
-    # cover unlikely event of 12+ hour delays
-    extra_ampm_flips = int(i/12)
-    time_first_number += 12 * extra_ampm_flips
-    i -= 12 * extra_ampm_flips
-    if extra_ampm_flips % 2 == 1:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    while time_first_number < 1:
-        time_first_number += 12
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    if i + time_first_number >= 12 and i > 0:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    # return new time
-    formatted_time = ""
-    if time_first_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_first_number)
-    else:
-        formatted_time += str(time_first_number)
-
-    formatted_time += ":"
-
-    if time_second_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_second_number)
-    else:
-        formatted_time += str(time_second_number)
-
-    formatted_time += " " + time_ampm_part
-
-    return formatted_time
+    return event_start_time - time_delta
 
 
 def get_checkin_time(event_start_time):
-    """ Given the event start time, find the check-in time based on the
-    delays/advances in settings.json
+    """ Given the event start time, find the check-in time based on the delays/advances in settings.json
 
     Args:
-        event_start_time (str): event start time (in the format '12:00 AM')
+        event_start_time (datetime.datetime): event start time
 
     Returns:
-        checkin_time (str): time to check-in event (in format '12:00 AM')
+        checkin_time (datetime.datetime): time to check-in event
     """
 
-    time_first_number, time_second_number, time_ampm_part = parse_time(event_start_time)
+    time_delta = datetime.timedelta(minutes=settings["minutes_to_advance_checkin"])
 
-    time_second_number -= settings["minutes_to_advance_checkin"]
-
-    i = 0
-    while time_second_number < 0:
-        time_second_number += 60
-        time_first_number -= 1
-        i += 1
-
-    # cover unlikely event of 12+ hour delays
-    extra_ampm_flips = int(i/12)
-    time_first_number += 12 * extra_ampm_flips
-    i -= 12 * extra_ampm_flips
-    if extra_ampm_flips % 2 == 1:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    while time_first_number < 1:
-        time_first_number += 12
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    if i + time_first_number >= 12 and i > 0:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    # return new time
-    formatted_time = ""
-    if time_first_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_first_number)
-    else:
-        formatted_time += str(time_first_number)
-
-    formatted_time += ":"
-
-    if time_second_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_second_number)
-    else:
-        formatted_time += str(time_second_number)
-
-    formatted_time += " " + time_ampm_part
-
-    return formatted_time
+    return event_start_time - time_delta
 
 
 def get_teardown_time(event_end_time):
-    """ Given the event end time, find the teardown time based on the
-    delays/advances in settings.json
+    """ Given the event end time, find the teardown time based on the delays/advances in settings.json
 
     Args:
-        event_end_time (str): event end time (in the format '12:00 AM')
+        event_end_time (datetime.datetime): event end time
 
     Returns:
-        teardown_time (str): time to teardown event (in format '12:00 AM')
+        teardown_time (datetime.datetime): time to teardown event
     """
 
-    time_first_number, time_second_number, time_ampm_part = parse_time(event_end_time)
+    time_delta = datetime.timedelta(minutes=settings["minutes_to_delay_teardown"])
 
-    time_second_number += settings["minutes_to_delay_teardown"]
-
-    i = 0
-    while time_second_number >= 60:
-        time_second_number -= 60
-        time_first_number += 1
-        i += 1
-
-    # cover unlikely event of 12+ hour delays
-    extra_ampm_flips = int(i/12)
-    time_first_number += 12 * extra_ampm_flips
-    i -= 12 * extra_ampm_flips
-    if extra_ampm_flips % 2 == 1:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    while time_first_number > 12:
-        time_first_number -= 12
-        i -= 1
-
-    if i + time_first_number > 12 and i > 0:
-        if time_ampm_part == "AM":
-            time_ampm_part = "PM"
-        else:
-            time_ampm_part = "AM"
-
-    # return new time
-    formatted_time = ""
-    if time_first_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_first_number)
-    else:
-        formatted_time += str(time_first_number)
-
-    formatted_time += ":"
-
-    if time_second_number < 10:
-        formatted_time += "0"
-        formatted_time += str(time_second_number)
-    else:
-        formatted_time += str(time_second_number)
-
-    formatted_time += " " + time_ampm_part
-
-    return formatted_time
+    return event_end_time + time_delta
 
 
 def select_staff(staff):
@@ -832,15 +741,14 @@ def select_assignment(assignment):
         raise NoSuchElementException("'{}' wasn't found in the list of assignments".format(assignment))
 
 
-def enter_time(time):
-    """ Enters the time 'time' in the Staff Assignment form. Assumes 'time' is
-    correctly formatted.
+def enter_time(time_to_enter):
+    """ Enters the time in the Staff Assignment form.
 
     Args:
-        time (string): time to enter in the format "12:00 PM"
+        time_to_enter (string): time to enter in the format "12:00 PM"
     """
 
-    time_split = time.split(" ")
+    time_split = time_to_enter.split(" ")
 
     text_box = wait_for_element_visible("#ctl00_ContentPlaceHolder1_txt_start_time")
     text_box.clear()
@@ -864,7 +772,5 @@ list_of_javascript = get_list_of_javascript(list_of_events)
 # go to event and schedule
 for command in list_of_javascript:
     schedule_event(command)
-
-time.sleep(30)
 
 driver.quit()
