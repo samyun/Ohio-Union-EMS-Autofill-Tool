@@ -305,6 +305,17 @@ def schedule_event(js_command):
     if title != "EMS - Event Details Page":
         raise RuntimeError("Page wasn't on the Event Details Page. Title was '{}'".format(title))
 
+    # check event has AV
+    try:
+        if wait_for_element_visible(".div_right_column > h5:nth-of-type(1)").text == "A/V Equipment":
+            av_equipment = wait_for_presence_of_all_elements(".div_right_column > ul:nth-of-type(1) > li")
+            if av_equipment[0].text == "None Found":
+                return
+        else:
+            return
+    except TimeoutException:
+        return
+
     # get the time for the event and parse it
     time_for_event = wait_for_element_visible("#spRunTime").text
     time_for_event_split = time_for_event.split(' - ')
@@ -337,6 +348,9 @@ def enter_assignment(person, time_to_enter, assignment):
         assignment (str): assignment. Valid types are: 'Setup', 'Check-In',
             'Teardown'
     """
+    if person == "(Unassigned)":
+        return
+
     select_staff(person)
     select_assignment(assignment)
     enter_time(time_to_enter)
@@ -574,16 +588,31 @@ def convert_times_to_datetime(start_time, end_time):
     end_time_first_part, end_time_second_part, end_time_ampm_part = parse_time(end_time)
 
     if start_time_ampm_part == "AM":
-        start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part, start_time_second_part)
+        if start_time_first_part == 12:  # eg 12:30 AM
+            start_time_dt = datetime.datetime(2016, 1, 1, 0, start_time_second_part)
+        else:  # eg 8:30 AM
+            start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part, start_time_second_part)
     else:
-        start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part + 12, start_time_second_part)
+        if start_time_first_part == 12:  # eg 12:30 PM
+            start_time_dt = datetime.datetime(2016, 1, 1, 12, start_time_second_part)
+        else:  # eg 4:30 PM
+            start_time_dt = datetime.datetime(2016, 1, 1, start_time_first_part + 12, start_time_second_part)
 
     if end_time_ampm_part == "AM" and start_time_ampm_part == "AM":
-        end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part, end_time_second_part)
+        if end_time_first_part == 12:  # eg 8:30 AM start, 12:30 AM end
+            end_time_dt = datetime.datetime(2016, 1, 2, 0, end_time_second_part)
+        else:  # eg 8:30 AM start, 9:30 AM end
+            end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part, end_time_second_part)
     elif end_time_ampm_part == "AM" and start_time_ampm_part == "PM":
-        end_time_dt = datetime.datetime(2016, 1, 2, end_time_first_part, end_time_second_part)
+        if end_time_first_part == 12:  # eg 8:00 PM start, 12:00 AM end
+            end_time_dt = datetime.datetime(2016, 1, 2, 0, end_time_second_part)
+        else:  # eg 8:00 PM start, 1:00 AM end
+            end_time_dt = datetime.datetime(2016, 1, 2, end_time_first_part, end_time_second_part)
     else:
-        end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part + 12, end_time_second_part)
+        if end_time_first_part == 12:  # eg 12:00 PM end
+            end_time_dt = datetime.datetime(2016, 1, 1, 12, end_time_second_part)
+        else:  # eg 7:00 PM end
+            end_time_dt = datetime.datetime(2016, 1, 1, end_time_first_part + 12, end_time_second_part)
 
     return start_time_dt, end_time_dt
 
@@ -601,9 +630,16 @@ def convert_time_to_datetime(t1):
     time_first_part, time_second_part, time_ampm_part = parse_time(t1)
 
     if time_ampm_part == "AM":
-        t1_dt = datetime.datetime(2016, 1, 1, time_first_part, time_second_part)
+        if time_first_part == 12:
+            t1_dt = datetime.datetime(2016, 1, 1, 0, time_second_part)
+        else:
+            t1_dt = datetime.datetime(2016, 1, 1, time_first_part, time_second_part)
+
     else:
-        t1_dt = datetime.datetime(2016, 1, 1, time_first_part + 12, time_second_part)
+        if time_first_part == 12:
+            t1_dt = datetime.datetime(2016, 1, 1, 12, time_second_part)
+        else:
+            t1_dt = datetime.datetime(2016, 1, 1, time_first_part + 12, time_second_part)
 
     return t1_dt
 
@@ -621,7 +657,12 @@ def convert_datetime_to_time(t1):
     hour = t1.time().hour
     minute = t1.time().minute
 
-    if hour > 12:
+    if hour == 0:
+        hour = 12
+        ampm = "AM"
+    elif hour == 12:
+        ampm = "PM"
+    elif hour > 12:
         hour -= 12
         ampm = "PM"
     else:
@@ -664,7 +705,7 @@ def get_setup_time(event_start_time):
         setup_time (datetime.datetime): time to setup for event
     """
     if compare_times(convert_time_to_datetime(settings["previous_day_setup_cutoff"]), event_start_time) == 1:
-        return "12:00 AM"
+        return datetime.datetime(2016, 1, 1, 0, 0)
 
     time_delta = datetime.timedelta(minutes=settings["minutes_to_advance_setup"])
 

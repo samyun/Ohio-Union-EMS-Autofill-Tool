@@ -7,12 +7,12 @@ import getpass
 input_w2w_username = input("Enter W2W username: ")
 input_w2w_password = getpass.getpass("Enter W2W password: ")
 
-#prompt date
+# prompt date
 validDate = 0;
 while not validDate:
     try:
         input_date = input("Enter date (eg May 9 2016 = \"5/9/2016\"): ")
-        #input_date = "5/23/2016"
+        # input_date = "5/23/2016"
 
         # parse date
         date_list = input_date.split("/")
@@ -63,30 +63,27 @@ name_date = name_month + "-" + input_day
 
 # start Chrome and navigate to W2W
 driver = webdriver.Chrome()
-driver.get('http://www.whentowork.com');
-
-# click to log in
-driver.find_element_by_xpath("/html/body/table[1]/tbody/tr/td[2]/table/tbody/tr[1]/td[3]/a").click()
+driver.get('https://whentowork.com/logins.htm')
 
 # if not logged in, log in.
 if driver.title == "W2W Sign In - WhenToWork Online Employee Scheduling Program":
     inputUser = driver.find_element_by_name("UserId1")
-    inputUser.send_keys(input_w2w_username);
+    inputUser.send_keys(input_w2w_username)
 
     inputPass = driver.find_element_by_name("Password1")
-    inputPass.send_keys(input_w2w_password);
-    inputPass.submit();
+    inputPass.send_keys(input_w2w_password)
+    inputPass.submit()
 
 if driver.title == "Sign In - WhenToWork Online Employee Scheduling Program":
     raise RuntimeError("Invalid W2W credentials")
 
 # navigate to Everyone's Schedule
-click = driver.find_element_by_xpath("/html/body/div[2]/table/tbody/tr/td[2]/table/tbody/tr[2]/td").click()
+driver.execute_script("ReplWin('empfullschedule','')")
 
 # save current window handle
 current_window = driver.current_window_handle
 
-#open date picker and select date
+# open date picker and select date
 click = driver.find_element_by_xpath("//*[@id=\"calbtn\"]/nobr/a[4]").click()
 driver.switch_to.window(driver.window_handles[-1])
 driver.execute_script("var y = " + input_year + "; var m = " + input_month + "; var d = " + input_day + ";if (window.opener.top) {window.opener.top.location=window.opener.top.location+\"&Date=\"+m + \"/\" + d + \"/\" + y;}self.close();")
