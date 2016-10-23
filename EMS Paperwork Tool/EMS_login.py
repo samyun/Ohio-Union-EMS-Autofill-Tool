@@ -316,6 +316,15 @@ def schedule_event(js_command):
     except TimeoutException:
         return
 
+    # check if event is already scheduled -> refresh js links
+    table = wait_for_element_visible("#ctl00_ContentPlaceHolder1_dg_staff_assignments")
+    table_rows = table.find_elements_by_css_selector("tr")
+    for row in table_rows:
+        if "Setup" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
+                or "Check-In" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
+                or "Teardown" in row.find_element_by_css_selector("td:nth-of-type(1)"):
+            return True
+
     # get the time for the event and parse it
     time_for_event = wait_for_element_visible("#spRunTime").text
     time_for_event_split = time_for_event.split(' - ')
@@ -811,7 +820,24 @@ list_of_events = get_list_of_events()
 list_of_javascript = get_list_of_javascript(list_of_events)
 
 # go to event and schedule
+redo = False
 for command in list_of_javascript:
-    schedule_event(command)
+    error = schedule_event(command)
+    if error is None:
+        redo = False
+    else:
+        redo = True
+        break
+
+while redo is True:
+    list_of_events = get_list_of_events()
+    list_of_javascript = get_list_of_javascript(list_of_events)
+    for command in list_of_javascript:
+        error = schedule_event(command)
+        if error is None:
+            redo = False
+        else:
+            redo = True
+            break
 
 driver.quit()
