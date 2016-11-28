@@ -130,7 +130,8 @@ function install_chromedriver_verbose {
     # if the latest version of chromedriver isn't in PATH, add it to path
     if ! chromedriver --version 2>&1 | grep -q $latest
     then
-        echo export PATH=$PWD/chromedriver:$PATH > .bash_profile
+        echo export PATH=$PWD/chromedriver:$PATH > ~/.bash_profile
+	
     fi
     cd $DIR
 }
@@ -150,7 +151,8 @@ function install_chromedriver_silent {
     # if the latest version of chromedriver isn't in PATH, add it to path
     if ! chromedriver --version 2>&1 | grep -q $latest
     then
-        echo export PATH=$PWD/chromedriver:$PATH > .bash_profile
+        echo export PATH=$PWD/chromedriver:$PATH > ~/.bash_profile
+	. ~/.bash_profile
     fi
     cd $DIR
 }
@@ -220,7 +222,7 @@ function check_for_dependencies {
         then
             echo ""
             echo -n "        chromedriver exists in $HOME/chromedriver/. Checking if latest version... "
-            cd chromedriver
+            cd ~/chromedriver
             if ! ./chromedriver --version 2>&1 | grep -q $latest
             then
                 echo -n "            chromedriver is an old version. Downloading latest version... "
@@ -242,12 +244,12 @@ function get_path {
 
     # Need to prompt the user for the installation - default to home dir
     default_path="$HOME"
-    echo -n "Enter the installation path [default: $default_path/OhioUnionEMSAutofillTool] > "
+    echo -n "Enter the installation path [default: $default_path/] > "
     read user_path
 
     if [ -z "${user_path}" ]
      then
-        user_path=$default_path/OhioUnionEMSAutofillTool
+        user_path=$default_path/
     fi
 
     user_path="${user_path/#\~/$HOME}"
@@ -264,7 +266,7 @@ function pull_branches {
     fi
 
     echo -n "Cloning Repository... "
-    if [ ! -d $user_path ]
+    if [ ! -d $user_path/OhioUnionEMSAutofillTool ]
     then
         cd $user_path
         git clone $QUIET https://github.com/samyun/OhioUnionEMSAutofillTool.git
@@ -274,7 +276,7 @@ function pull_branches {
     else
         echo ""
         echo -n "    Repository already exists. Updating... "
-        cd $user_path/
+        cd $user_path/OhioUnionEMSAutofillTool
         git pull $QUIET
         if [ $? -ne 0 ]; then
             echo -n "Do you want to continue anyways (y/n)? "
