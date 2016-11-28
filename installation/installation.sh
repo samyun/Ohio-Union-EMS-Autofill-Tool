@@ -266,17 +266,17 @@ function pull_branches {
     fi
 
     echo -n "Cloning Repository... "
-    if [ ! -d $user_path/OhioUnionEMSAutofillTool ]
+    if [ ! -d $user_path/Ohio-Union-EMS-Autofill-Tool ]
     then
         cd $user_path
-        git clone $QUIET https://github.com/samyun/OhioUnionEMSAutofillTool.git
+        git clone $QUIET https://github.com/samyun/Ohio-Union-EMS-Autofill-Tool.git
         if [ $? -ne 0 ]; then
             exit 1
         fi
     else
         echo ""
         echo -n "    Repository already exists. Updating... "
-        cd $user_path/OhioUnionEMSAutofillTool
+        cd $user_path/Ohio-Union-EMS-Autofill-Tool
         git pull $QUIET
         if [ $? -ne 0 ]; then
             echo -n "Do you want to continue anyways (y/n)? "
