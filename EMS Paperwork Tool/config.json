@@ -1,35 +1,17 @@
 {
-    "month": 10,
-    "day": 26,
+    "month": 12,
+    "day": 18,
     "year": 2016,
 
     "managers": [
-        {
-            "last_name": "Yun",
-            "first_name": "Sam",
-            "start_time": "6:00 PM",
-            "end_time": "12:00 AM"
-        }
     ],
 
     "leads": [
         {
-            "last_name": "Siracusa",
-            "first_name": "John",
-            "start_time": "6:30 AM",
-            "end_time": "10:00 AM"
-        },
-        {
-            "last_name": "Dalton",
-            "first_name": "Tristen",
-            "start_time": "10:00 AM",
-            "end_time": "1:00 PM"
-        },
-        {
             "last_name": "Kleman",
             "first_name": "Hannah",
-            "start_time": "1:00 PM",
-            "end_time": "10:00 PM"
+            "start_time": "11:30 AM",
+            "end_time": "7:00 PM"
         }
     ]
 }

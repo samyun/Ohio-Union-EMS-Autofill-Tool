@@ -177,7 +177,7 @@ def setup():
 
     logger.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                        filename='debug_log.log',
-                       level=logger.INFO,
+                       level=logger.DEBUG,
                        datefmt='%m/%d/%Y %I:%M:%S %p')
     logger.getLogger().addHandler(logger.StreamHandler())
     selenium_logger = logger.getLogger('selenium.webdriver.remote.remote_connection')
@@ -357,6 +357,7 @@ def schedule_event(js_command):
             logger.warning("For event '{}', first <h5> is not 'A/V Equipment'")
             return
     except TimeoutException:
+        logger.warning("For event '{}', timed out")
         return
 
     # check if event is already scheduled -> refresh js links
@@ -383,7 +384,7 @@ def schedule_event(js_command):
     time_for_event_split = time_for_event.split(' - ')
     event_start_time = time_for_event_split[0]
     event_end_time = time_for_event_split[1]
-    logger.debug("Start: '{0}' End: '{1}'".format(event_start_time, event_end_time))
+    logger.debug("Event '{0}' Start: '{0}' End: '{1}'".format(event_name, event_start_time, event_end_time))
 
     event_start_dt, event_end_dt = convert_times_to_datetime(event_start_time, event_end_time)
 
@@ -401,6 +402,7 @@ def schedule_event(js_command):
                             teardown_person,
                             teardown_time))
     except TypeError:
+        logger.warning("For event '{}', TypeError caught.'")
         return
 
     # Enter assignments
@@ -494,7 +496,7 @@ def find_setup_info(event_start_time):
     Returns:
         setup_info (2-tuple): First element is the name of person (in the
         format 'Last, First') and second element is the time to assign (in the
-        format '12:00 AM'). If nobody can be assigned to the setup, return None
+        format '12:00 AM'). If nobody can be assigned to the setup, return "(Unassigned)", "12:00 AM"
     """
 
     setup_dt = get_setup_time(event_start_time)
@@ -521,7 +523,7 @@ def find_setup_info(event_start_time):
                 break
 
     if not found:
-        return None
+        return "(Unassigned)", "12:00 AM"
     else:
         name = person["last_name"] + ", " + person["first_name"]
         return name, setup_time
@@ -545,7 +547,7 @@ def find_checkin_info(event_start_time):
         checkin_info (2-tuple): First element is the name of person (in the
         format 'Last, First') and second element is the time to assign (in the
         format '12:00 AM'). If nobody can be assigned to the check-in, return
-        None
+        "(Unassigned)", "12:00 AM"
     """
 
     checkin_dt = get_checkin_time(event_start_time)
@@ -569,7 +571,7 @@ def find_checkin_info(event_start_time):
                 break
 
     if not found:
-        return None
+        return "(Unassigned)", "12:00 AM"
     else:
         name = person["last_name"] + ", " + person["first_name"]
         return name, checkin_time
@@ -593,7 +595,7 @@ def find_teardown_info(event_end_time):
         teardown_info (2-tuple): First element is the name of person (in the
         format 'Last, First') and second element is the time to assign (in the
         format '12:00 AM'). If nobody can be assigned to the teardown, return
-        None
+        "(Unassigned)", "12:00 AM"
     """
 
     teardown_dt = get_teardown_time(event_end_time)
@@ -617,7 +619,7 @@ def find_teardown_info(event_end_time):
                 break
 
     if not found:
-        return None
+        return "(Unassigned)", "12:00 AM"
     else:
         name = person["last_name"] + ", " + person["first_name"]
         return name, teardown_time

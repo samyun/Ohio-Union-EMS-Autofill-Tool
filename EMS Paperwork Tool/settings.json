@@ -1,8 +1,8 @@
 {
-    "first_name": "Brutus",
-    "last_name": "Buckeye",
-    "username": "name.#",
-    "password": "password",
+    "first_name": "Sam",
+    "last_name": "Yun",
+    "username": "yun.112",
+    "password": "KrispyKreme1",
     "minutes_to_advance_setup": 30,
     "minutes_to_advance_checkin": 15,
     "minutes_to_delay_teardown": 30,
