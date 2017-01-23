@@ -1,0 +1,37 @@
+{
+    "AV Student Manager": [
+        {
+            "last_name": "Hempel",
+            "first_name": "Alex",
+            "start_time": "6:00 PM",
+            "end_time": "12:00 AM"
+        }
+    ],
+
+    "AV Shift Lead": [
+        {
+            "last_name": "Kleman",
+            "first_name": "Hannah",
+            "start_time": "6:30 AM",
+            "end_time": "11:00 AM"
+        },
+        {
+            "last_name": "Bachir",
+            "first_name": "Brian",
+            "start_time": "11:00 AM",
+            "end_time": "12:00 PM"
+        },
+        {
+            "last_name": "Ogbuefi",
+            "first_name": "Josh",
+            "start_time": "12:00 PM",
+            "end_time": "4:30 PM"
+        },
+        {
+            "last_name": "Jones",
+            "first_name": "Ryan",
+            "start_time": "4:30 PM",
+            "end_time": "10:00 PM"
+        }
+    ]
+}
