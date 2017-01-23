@@ -131,20 +131,15 @@ class EMS:
         # If select position, log in as manager
         if select_position:
             self.driver.get("https://ohiounion.osu.edu/secure/ems/")
+
+        if self.driver.current_url == "https://ohiounion.osu.edu/secure/ems/":
             try:
                 select = Select(self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_ddl_position"))
-                select.select_by_visible_text("Student Manager - AV")
+                select.select_by_visible_text(settings["manager_position"])
                 self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_btn_submit").click()
             except NoSuchElementException:
-                raise NoSuchElementException("You must be an AV Manager to use this tool.")
-        else:
-            if self.driver.current_url == "https://ohiounion.osu.edu/secure/ems/":
-                try:
-                    select = Select(self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_ddl_position"))
-                    select.select_by_visible_text("Student Manager - AV")
-                    self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_btn_submit").click()
-                except NoSuchElementException:
-                    raise NoSuchElementException("You must be an AV Manager to use this tool.")
+                raise NoSuchElementException("Unable to find '{}' in EMS position list. Are you a manager?"
+                                             .format(settings["manager_position"]))
 
     def format_date(self):
         """ Formats date in MM/DD/YYYY format
@@ -181,7 +176,7 @@ class EMS:
         self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_btn_submit").click()
 
     def get_list_of_events(self):
-        """ From the "Ohio Union Daily AV Setup Schedule" page, gets each pair of
+        """ From the Ohio Union Daily Setup Schedule page, gets each pair of
         rows and returns them
 
         Returns:
@@ -263,7 +258,7 @@ class EMS:
 
     def schedule_event(self, js_command):
         """ Takes the javascript command to navigate to the event page from the
-        "Ohio Union Daily AV Setup Schedule" page. Schedules the event based on
+        Ohio Union Daily Setup Schedule page. Schedules the event based on
         input from schedule. Also uses "skip_events_with_no_av" to skip events
         without any AV equipment listed.
 
@@ -791,7 +786,15 @@ class EMS:
                 select.select_by_index(list_of_options.index(option))
                 break
         else:
-            raise NoSuchElementException("'{}' wasn't found in the list of staff".format(staff))
+            staff_list = staff.split(", ")
+            truncated_staff = staff_list[0] + ", " + staff_list[1][0:3]
+            self.logger.info("Unable to find '{0}' in list of staff, trying '{1}'".format(staff, truncated_staff))
+            for option in list_of_options:
+                if staff in option:
+                    select.select_by_index(list_of_options.index(option))
+                    break
+            else:
+                raise NoSuchElementException("'{}' wasn't found in the list of staff".format(staff))
 
     def select_assignment(self, assignment):
         """ Selects the assignment 'assignment' in the Staff Assignment form
