@@ -480,7 +480,7 @@ class EMS:
 
         setup_dt = self.get_setup_time(event_start_time)
         setup_time = self.convert_datetime_to_time(setup_dt)
-        if setup_time == "12:00 AM":
+        if setup_time == settings["setup_time_night_before"]:
             staff = settings["current_manager_last_name"] + ", " + settings["current_manager_first_name"]
             return staff, setup_time
 
@@ -728,7 +728,7 @@ class EMS:
         """
         if self.compare_times(self.convert_time_to_datetime(
                 settings["previous_day_setup_cutoff"]), event_start_time) == 1:
-            return datetime.datetime(2016, 1, 1, 0, 0)
+            return datetime.datetime.strptime("2016/1/1 " + settings["setup_time_night_before"], "%Y/%m/%d %I:%M %p")
 
         time_delta = datetime.timedelta(minutes=settings["minutes_to_advance_setup"])
 
