@@ -437,10 +437,11 @@ class EMS:
                         self.logger.debug("   Worker is possibly the last worker of the night")
                         ending_shift = {"end_time": end_time,
                                         "last_name": worker["last_name"],
-                                        "first_name": worker["first_name"]}
-                    else:
+                                        "first_name": worker["first_name"],
+                                        "position": shift_position}
+                    elif "Manager" in shift_position:
                         self.logger.debug("    Checking if worker is the last worker of the night")
-                        if self.compare_times(ending_shift["end_time"], time_dt) >= 0:
+                        if self.compare_times(ending_shift["end_time"], time_dt) <= 0:
                             self.logger.debug("    Worker is possibly the last worker of the night")
                             ending_shift = {"end_time": end_time,
                                             "last_name": worker["last_name"],
@@ -449,9 +450,14 @@ class EMS:
                             self.logger.debug("    Worker is not the last worker of the night")
 
         if ending_shift == ():
+            self.logger.debug("Time '{}' has no workers".format(time_dt.strftime("%H:%M")))
             return {"last_name": "{Unassigned}", "first_name": "{Unassigned}"}
         else:
-            return {"last_name": ending_shift[0], "first_name": ending_shift[1]}
+            self.logger.debug("Time '{0}' has worker '{1}, '{2}'".format(time_dt.strftime("%H:%M"),
+                                                                         ending_shift["last_name"],
+                                                                         ending_shift["first_name"]))
+            return {"last_name": ending_shift["last_name"], "first_name": ending_shift["first_name"]}
+        # Managers only?
 
     def find_setup_info(self, event_start_time):
         """ Given an event start time, find the correct person to setup the event
@@ -1016,7 +1022,7 @@ def setup():
 
     logger.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                        filename='debug_log.log',
-                       level=logger.INFO,
+                       level=logger.DEBUG,
                        datefmt='%m/%d/%Y %I:%M:%S %p')
     logger.getLogger().addHandler(logger.StreamHandler())
     selenium_logger = logger.getLogger('selenium.webdriver.remote.remote_connection')
