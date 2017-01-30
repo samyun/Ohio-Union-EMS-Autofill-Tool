@@ -163,7 +163,7 @@ class EMS:
         formatted_date = self.format_date()
 
         # navigate to event listing page
-        self.logger.debug("Navigating to event listing page")
+        self.logger.info("Navigating to event listing page")
         self.navigate_to_event_listing_page()
 
         # Go to date
@@ -191,7 +191,7 @@ class EMS:
         # split rows into events
         list_events = []
         for row_1, row_2 in zip(list_of_rows[0::2], list_of_rows[1::2]):
-            self.logger.debug("appending event: '{}".format(row_1.text))
+            self.logger.info("appending event: '{}".format(row_1.text))
             list_events.append((row_1, row_2))
 
         return list_events
@@ -219,7 +219,7 @@ class EMS:
             room = first_row.find_element_by_css_selector("td:nth-of-type(4)").text
             name = first_row.find_element_by_css_selector("td:nth-of-type(5)").text
             resnum = first_row.find_element_by_css_selector("td:nth-of-type(6)").text
-            self.logger.debug("Checking event '{0}' in room '{1}' with reservation # '{2}'".format(name, room, resnum))
+            self.logger.info("Checking event '{0}' in room '{1}' with reservation # '{2}'".format(name, room, resnum))
 
             # check if already scheduled
             if settings["skip_already_scheduled"]:
@@ -228,7 +228,7 @@ class EMS:
                 teardown_time = first_row.find_element_by_css_selector("td:nth-of-type(9)").text
 
                 if setup_time != " " or checkin_time != " " or teardown_time != " ":
-                    self.logger.debug("Event is already scheduled")
+                    self.logger.info("Event is already scheduled")
                     continue
 
             # check if already confirmed
@@ -238,18 +238,18 @@ class EMS:
                 teardown_confirm = second_row.find_element_by_css_selector("td:nth-of-type(6)").text
 
                 if setup_confirm != "Confirmed" or checkin_confirm != "Confirmed" or teardown_confirm != "Confirmed":
-                    self.logger.debug("Event is already confirmed")
+                    self.logger.info("Event is already confirmed")
                     continue
 
             # check if skip rooms
             if settings["skip_rooms"]:
                 room_name = first_row.find_element_by_css_selector("td:nth-of-type(4)").text
                 if room_name in settings["skip_following_rooms"]:
-                    self.logger.debug("Room should be skipped")
+                    self.logger.info("Room should be skipped")
                     continue
 
             # get javascript command to go to page
-            self.logger.debug("Event will be scheduled")
+            self.logger.info("Event will be scheduled")
             js_command = first_row.find_element_by_css_selector("td:nth-of-type(5) > a").get_attribute("href")
             splitted_command_list = js_command.split(":")
             js_list.append(splitted_command_list[1])
@@ -310,6 +310,8 @@ class EMS:
         # check if event is a room that should be skipped -> refresh js links
         if settings["skip_rooms"]:
             full_room_name = self.wait_for_element_visible("#spRoom").text
+            self.logger.info("For event '{0}', in room '{1}', checking if room should be skipped"
+                             .format(event_name, full_room_name))
             for name in settings["skip_following_rooms"]:
                 if name in full_room_name:
                     self.logger.info("Event '{0}' is in room '{1}' that should be skipped. Need to refresh links"
@@ -321,7 +323,7 @@ class EMS:
         time_for_event_split = time_for_event.split(' - ')
         event_start_time = time_for_event_split[0]
         event_end_time = time_for_event_split[1]
-        self.logger.debug("Event '{0}' Start: '{0}' End: '{1}'".format(event_name, event_start_time, event_end_time))
+        self.logger.info("Event '{0}' Start: '{0}' End: '{1}'".format(event_name, event_start_time, event_end_time))
 
         event_start_dt, event_end_dt = self.convert_times_to_datetime(event_start_time, event_end_time)
 
@@ -450,10 +452,10 @@ class EMS:
                             self.logger.debug("    Worker is not the last worker of the night")
 
         if ending_shift == ():
-            self.logger.debug("Time '{}' has no workers".format(time_dt.strftime("%H:%M")))
+            self.logger.info("Time '{}' has no workers".format(time_dt.strftime("%H:%M")))
             return {"last_name": "{Unassigned}", "first_name": "{Unassigned}"}
         else:
-            self.logger.debug("Time '{0}' has worker '{1}, '{2}'".format(time_dt.strftime("%H:%M"),
+            self.logger.info("Time '{0}' has worker '{1}, '{2}'".format(time_dt.strftime("%H:%M"),
                                                                          ending_shift["last_name"],
                                                                          ending_shift["first_name"]))
             return {"last_name": ending_shift["last_name"], "first_name": ending_shift["first_name"]}
@@ -735,7 +737,7 @@ class EMS:
 
         return_time = event_start_time - time_delta
 
-        self.logger.debug("Setup time is '{}'".format(return_time.strftime("%H:%M")))
+        self.logger.info("Setup time is '{}'".format(return_time.strftime("%H:%M")))
 
         return return_time
 
@@ -753,7 +755,7 @@ class EMS:
 
         return_time = event_start_time - time_delta
 
-        self.logger.debug("Check-in time is '{}'".format(return_time.strftime("%H:%M")))
+        self.logger.info("Check-in time is '{}'".format(return_time.strftime("%H:%M")))
 
         return return_time
 
@@ -771,7 +773,7 @@ class EMS:
 
         return_time = event_end_time + time_delta
 
-        self.logger.debug("Teardown time is '{}'".format(return_time.strftime("%H:%M")))
+        self.logger.info("Teardown time is '{}'".format(return_time.strftime("%H:%M")))
 
         return return_time
 
@@ -1022,7 +1024,7 @@ def setup():
 
     logger.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                        filename='debug_log.log',
-                       level=logger.DEBUG,
+                       level=logger.INFO,
                        datefmt='%m/%d/%Y %I:%M:%S %p')
     logger.getLogger().addHandler(logger.StreamHandler())
     selenium_logger = logger.getLogger('selenium.webdriver.remote.remote_connection')
@@ -1046,12 +1048,15 @@ def setup():
         raise RuntimeError("settings.json doesn't exist in path '{}'".format(os.getcwd()))
 
     # open settings file
-    logger.debug("Reading settings file")
-    with open('settings.json', 'r') as settings_file:
-        settings_json = settings_file.read()
-        global settings
-        settings = json.loads(settings_json)
-        settings_file.close()
+    logger.info("Reading settings file")
+    try:
+        with open('settings.json', 'r') as settings_file:
+            settings_json = settings_file.read()
+            global settings
+            settings = json.loads(settings_json)
+            settings_file.close()
+    except RuntimeError:
+        raise RuntimeError("Error reading settings.json.")
 
 
 def get_date():
