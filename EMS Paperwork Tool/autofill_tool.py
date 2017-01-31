@@ -1146,7 +1146,7 @@ def get_date():
 
 
 def parse_schedule_file(log):
-    """ Parses schedule.json file. Only runs is settings["use_w2w"] is False
+    """ Parses schedule.json file. Only runs if settings["use_w2w"] is False
 
     Args:
         log (logging): logger object
@@ -1162,10 +1162,13 @@ def parse_schedule_file(log):
 
     # open schedule file
     log.debug("Reading schedule file")
-    with open('schedule.json', 'r') as schedule_file:
-        schedule_json = schedule_file.read()
-        schedule_dict = json.loads(schedule_json)
-        schedule_file.close()
+    try:
+        with open('schedule.json', 'r') as schedule_file:
+            schedule_json = schedule_file.read()
+            schedule_dict = json.loads(schedule_json)
+            schedule_file.close()
+    except RuntimeError:
+        raise RuntimeError("There was an error with schedule.json")
 
     return schedule_dict
 
