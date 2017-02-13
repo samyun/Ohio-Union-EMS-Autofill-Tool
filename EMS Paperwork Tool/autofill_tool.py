@@ -1038,7 +1038,7 @@ def setup():
 
     if platform == "win32":
         os.system('cls')
-    elif platform in ["darwin", "linux2", "darwin"]:
+    elif platform in ["darwin", "linux", "darwin"]:
         os.system('clear')
     else:
         raise RuntimeError("Platform '{}' not supported".format(platform))
