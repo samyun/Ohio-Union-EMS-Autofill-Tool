@@ -323,7 +323,7 @@ class EMS:
         time_for_event_split = time_for_event.split(' - ')
         event_start_time = time_for_event_split[0]
         event_end_time = time_for_event_split[1]
-        self.logger.info("Event '{0}' Start: '{0}' End: '{1}'".format(event_name, event_start_time, event_end_time))
+        self.logger.info("Event '{0}' Start: '{1}' End: '{2}'".format(event_name, event_start_time, event_end_time))
 
         event_start_dt, event_end_dt = self.convert_times_to_datetime(event_start_time, event_end_time)
 
@@ -383,8 +383,8 @@ class EMS:
                         break
 
         if not found:
-            raise RuntimeError("After assigning '{0}' to '{1}' at '{2}', assignment wasn't found in the table.".format
-                               (person, assignment, time))
+            self.logger.warning("After assigning '{0}' to '{1}' at '{2}', assignment wasn't found in the table.".format
+                                (person, assignment, time))
 
     def assign_setup(self, person, setup_time):
         """ Assigns the setup to the given person at the given time.
@@ -882,6 +882,7 @@ class W2W:
             input_pass.submit()
 
         if self.driver.title == "Sign In - WhenToWork Online Employee Scheduling Program":
+            self.logger.exception("Invalid W2W credentials")
             raise RuntimeError("Invalid W2W credentials")
 
         # navigate to Everyone's Schedule
@@ -926,7 +927,7 @@ class W2W:
 
         select = Select(self.driver.find_element_by_name("EmpListSkill"))
         try:
-            self.logger.debug("Selecting '{}' as position".format(position_name))
+            self.logger.info("{}:".format(position_name))
             select.select_by_visible_text(position_name)
         except SeleniumExceptions.NoSuchElementException:
             raise SeleniumExceptions.NoSuchElementException("Unable to find '{}' in the list.".format(position_name))
@@ -1006,7 +1007,10 @@ class W2W:
                             "start_time": start_datetime,
                             "end_time": end_datetime,
                         }
-
+                        self.logger.info(" - '{0} {1}' @ '{2}' - '{3}'".format(first_name,
+                                                                               last_name,
+                                                                               start_datetime,
+                                                                               end_datetime))
                         paired_times.append(position_dict)
 
                     i += 2
