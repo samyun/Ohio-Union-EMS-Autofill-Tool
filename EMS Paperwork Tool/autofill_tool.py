@@ -298,14 +298,15 @@ class EMS:
             return
 
         # check if event is already scheduled -> refresh js links
-        table = self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_dg_staff_assignments")
-        table_rows = table.find_elements_by_css_selector("tr")
-        for row in table_rows:
-            if "Setup" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
-                    or "Check-In" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
-                    or "Teardown" in row.find_element_by_css_selector("td:nth-of-type(1)").text:
-                self.logger.info("Event '{}' is already scheduled. Need to refresh links.".format(event_name))
-                return True
+        if settings["skip_already_scheduled"]:
+            table = self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_dg_staff_assignments")
+            table_rows = table.find_elements_by_css_selector("tr")
+            for row in table_rows:
+                if "Setup" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
+                        or "Check-In" in row.find_element_by_css_selector("td:nth-of-type(1)").text \
+                        or "Teardown" in row.find_element_by_css_selector("td:nth-of-type(1)").text:
+                    self.logger.info("Event '{}' is already scheduled. Need to refresh links.".format(event_name))
+                    return True
 
         # check if event is a room that should be skipped -> refresh js links
         if settings["skip_rooms"]:
@@ -434,8 +435,14 @@ class EMS:
                 if self.compare_times(start_time, time_dt) <= 0 and self.compare_times(end_time, time_dt) == 1:
                     self.logger.debug("    Found worker!")
                     return worker
-                elif self.compare_times(start_time, time_dt) <= 0 and self.compare_times(end_time, time_dt) < 0:
+                elif self.compare_times(start_time, time_dt) <= 0 and self.compare_times(end_time, time_dt) <= 0:
                     if ending_shift == {}:
+                        self.logger.debug("   Worker is possibly the last worker of the night")
+                        ending_shift = {"end_time": end_time,
+                                        "last_name": worker["last_name"],
+                                        "first_name": worker["first_name"],
+                                        "position": shift_position}
+                    elif self.compare_times(end_time, ending_shift["end_time"]) < 0:
                         self.logger.debug("   Worker is possibly the last worker of the night")
                         ending_shift = {"end_time": end_time,
                                         "last_name": worker["last_name"],
@@ -1116,7 +1123,7 @@ def get_date():
                     input_year = tomorrow.year
                     valid_date = 1
 
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 print("Invalid date entry")
 
     if input_month == 1:
