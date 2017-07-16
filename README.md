@@ -3,10 +3,28 @@
 This is a tool to auto-fill the EMS paperwork for the Ohio Union AV managers. This tool is provided as-is and is under
 active development.
 
+## Table of Contents
+* [Installation](#installation)
+   * [Python3](#python3)
+   * [Pip3](#pip3)
+   * [Selenium](#selenium)
+   * [Google Chrome](#google-chrome)
+   * [ChromeDriver](#chromedriver)
+   * [EMS.Paperwork.Tool.zip](#ems.paperwork.tool.zip)
+* [macOS Installation Script](#macos-installation-script)
+* [Background](#background)
+* [How to Run](#how-to-run)
+* [settings.json](#settings.json)
+* [To-Do](#to-do)
+
 ## Installation
 Mac users: See [macOS Installation Script](#macos-installation-script) for an automated installation, or follow the 
 manual steps below.
-1. Install the latest version of Python 3  
+
+#### Python3
+Python is the scripting language that the autofill tool is written in. There are two versions of Python: Python 2.x 
+and Python 3.x which are incompatible with each other. This tool is written in Python 3. It's been tested with version 
+3.4 and later.
    1. Download and install the latest version of Python 3
       * ([Windows](https://www.python.org/downloads/windows/ "Python for Windows")):
          1. I recommend installing to <code>C:\python3</code> instead of the installer default
@@ -53,16 +71,27 @@ manual steps below.
             6. Type <code>source .bash_profile</code> to apply changes from <code>.bash_profile</code>
             7. Verify python3 is in the correct path by typing <code>python3 --version</code> and verify the output says 
             <code>Python 3.x.x</code>. If it doesn't, double check your steps.
-2. Install pip3
+            
+##### Pip3
+Pip is a Python package installer. It is used to install Python packages, specifically [Selenium](#selenium).
    1. Launch Command Prompt/Terminal
    2. Type <code>python3 -m pip install -U pip</code>. 
    3. Resolve any errors before continuing
-3. Install selenium from pip3
+   
+##### Selenium
+Selenium (WebDriver) is a web-application testing tool that automates actions on a web browser. Selenium provides the interface 
+ between the Python commands and the actual websites. 
    1. Launch Command Prompt/Terminal
    2. Type <code>python3 -m pip install -U selenium</code>. 
    3. Resolve any errors before continuing
-4. Install [Google Chrome](https://www.google.com/chrome/browser/desktop/index.html "Google Chrome") (not Google Chrome Canary or Chromium or Google Chrome Channels)
-5. Download [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/ "Chromedriver") and add to PATH
+   
+##### [Google Chrome](https://www.google.com/chrome/browser/desktop/index.html "Google Chrome")
+Google Chrome is a popular web browser, and is the only browser supported by this tool. Other browsers could be used 
+after minor modifications to the script, but that has not been tested.
+   * Install the regular version of Google Chrome (not Google Chrome Canary or Chromium or Google Chrome Channels)
+
+##### [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/ "Chromedriver")
+ChromeDriver is a server that provides the interface for Selenium Webdriver to work with Google Chrome.
    1. Download the latest version of Chromedriver from link above.
    2. Extract into
       * Windows: <code>C:\chromedriver\\</code>
@@ -93,7 +122,11 @@ manual steps below.
          6. Type <code>source .bash_profile</code> to apply changes from <code>.bash_profile</code>
    5. Verify chromedriver is in the correct path by typing <code>chromedriver --version</code> and verify it returns 
          <code>ChromeDriver x.x[...]</code>. If it doesn't, double check your steps.
-6. Download the latest <code>EMS.Paperwork.Tool.zip</code> from 
+         
+##### EMS.Paperwork.Tool.zip
+This zip folder contains the autofill tool and the configuration files to run it.
+
+Download the latest <code>EMS.Paperwork.Tool.zip</code> from 
 https://github.com/samyun/Ohio-Union-EMS-Autofill-Tool/releases/latest and extract it to a new folder.
 
 ## macOS Installation Script
