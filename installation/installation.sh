@@ -131,7 +131,7 @@ function install_chromedriver_verbose {
     if ! chromedriver --version 2>&1 | grep -q $latest
     then
         echo export PATH=$PWD/chromedriver:$PATH > ~/.bash_profile
-	
+	source ~/.bash_profile
     fi
     cd $DIR
 }
@@ -152,7 +152,7 @@ function install_chromedriver_silent {
     if ! chromedriver --version 2>&1 | grep -q $latest
     then
         echo export PATH=$PWD/chromedriver:$PATH > ~/.bash_profile
-	. ~/.bash_profile
+	source ~/.bash_profile
     fi
     cd $DIR
 }
@@ -229,7 +229,8 @@ function check_for_dependencies {
                 install_chromedriver
             else
                 echo -n "            chromedriver is current version. Exporting PATH... "
-                echo export PATH=$PWD:$PATH > .bash_profile
+                echo export PATH=$PWD:$PATH > ~/.bash_profile
+		source ~/.bash_profile
             fi
         else
             echo ""

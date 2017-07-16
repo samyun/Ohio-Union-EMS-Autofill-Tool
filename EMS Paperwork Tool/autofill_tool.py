@@ -895,16 +895,9 @@ class W2W:
         # navigate to Everyone's Schedule
         self.driver.execute_script("ReplWin('empfullschedule','')")
 
-        # save current window handle
-        current_window = self.driver.current_window_handle
-
-        # open date picker and select date
-        self.driver.find_element_by_xpath("//*[@id=\"calbtn\"]/nobr/a[4]").click()
-        self.driver.switch_to.window(self.driver.window_handles[-1])
-        self.driver.execute_script("var y = " + str(year) + "; var m = " + str(month) + "; var d = " + str(day) +
-                                   ";if (window.opener.top) {window.opener.top.location=window.opener.top.location+"
-                                   "\"&Date=\"+m + \"/\" + d + \"/\" + y;}self.close();")
-        self.driver.switch_to.window(current_window)
+        # go to date
+        url_with_date = self.driver.current_url + "&Date={0}/{1}/{2}".format(month, day, year)
+        self.driver.get(url_with_date)
 
         # Get correct column number by date
         date_row_xpath = "/html/body/div[4]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[1]/tbody/tr"
