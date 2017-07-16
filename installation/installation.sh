@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to install requirements for the Ohio Union EMS Autofill Tool. This
-# script only runs on Mac (tested against OS X 10.11.6 El Capitan). If you're
+# script only runs on Mac (tested against macOS Sierra 10.12.5). If you're
 # on a different platform (Windows/Linux), see README for manual installation.
 #
 # usage: ./installation.sh [-flags]
@@ -64,7 +64,7 @@ function install_git {
 
 function install_python_verbose {
     cd $DIR/tmp
-    download_link="https://www.python.org/ftp/python/3.5.2/python-3.5.2-macosx10.6.pkg" #replace with latest link
+    download_link="https://www.python.org/ftp/python/3.6.1/python-3.6.1-macosx10.6.pkg" #replace with latest link
     curl $download_link -o python3.pkg
     sudo installer -pkg python3.pkg -target /
     cd $DIR
@@ -72,7 +72,7 @@ function install_python_verbose {
 
 function install_python_silent {
     cd $DIR/tmp
-    download_link="https://www.python.org/ftp/python/3.5.2/python-3.5.2-macosx10.6.pkg" #replace with latest link
+    download_link="https://www.python.org/ftp/python/3.6.1/python-3.6.1-macosx10.6.pkg" #replace with latest link
     curl $download_link -so python3.pkg &
     spinner
     sudo installer -pkg python3.pkg -target / 1> /dev/null&
