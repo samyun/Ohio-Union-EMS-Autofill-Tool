@@ -458,7 +458,7 @@ class EMS:
                         else:
                             self.logger.debug("    Worker is not the last worker of the night")
 
-        if ending_shift == ():
+        if ending_shift == {}:
             self.logger.info("Time '{}' has no workers".format(time_dt.strftime("%H:%M")))
             return {"last_name": "{Unassigned}", "first_name": "{Unassigned}"}
         else:
@@ -1115,6 +1115,8 @@ def get_date():
                     input_day = tomorrow.day
                     input_year = tomorrow.year
                     valid_date = 1
+
+                print("Using {0}/{1}/{2}".format(input_month, input_day, input_year))
 
             except (RuntimeError, ValueError):
                 print("Invalid date entry")

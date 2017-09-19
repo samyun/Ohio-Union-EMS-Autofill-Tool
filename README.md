@@ -139,7 +139,7 @@ https://github.com/samyun/Ohio-Union-EMS-Autofill-Tool/releases/latest and save 
    * e.g. <code>cd ~/</code>
 3. Type <code>./installation.sh [-flags]</code>
    * Flags:
-      * -p: Skip pulling from repo
+      * -d: Install the development environment
       * -i: Skip installations
       * -r: Reinstall dependencies
       * -v: verbose

@@ -6,7 +6,7 @@
 # usage: ./installation.sh [-flags]
 #
 # Options:
-#           -p: Skip pulling from repo
+#           -d: Install the development environment
 #           -i: Skip installations
 #           -r: Reinstall dependencies
 #           -v: verbose
@@ -167,9 +167,12 @@ function install_chromedriver {
 }
 
 function reinstall_dependencies {
-    echo -n "Reinstalling Git... "
-    install_git
-    echo "OK"
+    if ! $skipPulls
+    then
+        echo -n "Reinstalling Git... "
+        install_git
+        echo "OK"
+    fi
 
     echo -n "Reinstalling Python3... "
     install_python
@@ -186,14 +189,17 @@ function reinstall_dependencies {
 
 function check_for_dependencies {
     # Need to install the tools if they are not found on the machine
-    echo -n "Checking if Git is installed... "
-    if ! git --version >/dev/null 2>&1
+    if ! $skipPulls
     then
-        echo ""
-        echo -n "    git not found. Downloading latest version... "
-        install_git
+        echo -n "Checking if Git is installed... "
+        if ! git --version >/dev/null 2>&1
+        then
+            echo ""
+            echo -n "    git not found. Downloading latest version... "
+            install_git
+        fi
+        echo "OK"
     fi
-    echo "OK"
 
     echo -n "Checking if Python3 is installed... "
     if ! python3 --version >/dev/null 2>&1
@@ -292,9 +298,29 @@ function pull_branches {
     fi
 }
 
+function download_latest_release {
+    echo -n "Downloading latest release... "
+    cd $DIR/tmp
+    download_link=$(curl -s https://api.github.com/repos/samyun/Ohio-Union-EMS-Autofill-Tool/releases/latest | grep 'browser_' | cut -d\" -f4 | grep 'Tool.zip')
+    curl $download_link -o autofill_tool.zip
+
+    if [ ! -d $user_path/autofill_tool ]
+    then
+        cd $user_path
+        unzip $DIR/tmp/autofill_tool.zip
+    else
+        echo ""
+        echo -n "    autofill_tool already exists... "
+        unzip autofill_tool.zip
+        echo -n "Updating autofill_tool.py only - See release notes if settings.json should be edited..."
+        cd $user_path/autofill_tool
+        mv -f $DIR/tmp/autofill_tool/autofill_tool.py autofill_tool.py
+    fi
+}
+
 # Get options
 reinstall='false' #reinstall all dependencies
-skipPulls='false' #skip repo pulls
+skipPulls='true' #skip repo pulls
 skipInstalls='false' #skip installations
 verbose='false' #verbose
 
@@ -304,8 +330,8 @@ while getopts ":rpivh" optname
       "r")
         reinstall='true'
         ;;
-      "p")
-        skipPulls='true'
+      "d")
+        skipPulls='false'
         ;;
       "i")
         skipInstalls='true'
@@ -385,7 +411,7 @@ fi
 
 get_path
 
-# If -p flags are set, skip repo pulls
+# If -d flags are set, pull repo
 if ! $skipPulls
 then
     pull_branches
