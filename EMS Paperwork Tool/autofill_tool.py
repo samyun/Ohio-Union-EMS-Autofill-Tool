@@ -877,6 +877,7 @@ class W2W:
         """
 
         # navigate to W2W
+        self.logger.info("Navigating to WhenToWork")
         self.driver.get('https://whentowork.com/logins.htm')
 
         # if not logged in, log in.
@@ -1028,12 +1029,16 @@ def setup():
 
     logger.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
                        filename='debug_log.log',
-                       level=logger.INFO,
+                       level=logger.DEBUG,
                        datefmt='%m/%d/%Y %I:%M:%S %p')
-    logger.getLogger().addHandler(logger.StreamHandler())
     selenium_logger = logger.getLogger('selenium.webdriver.remote.remote_connection')
     # Only display possible problems
     selenium_logger.setLevel(logger.WARNING)
+
+    # define a Handler which writes INFO messages or higher to the sys.stderr
+    console = logger.StreamHandler()
+    console.setLevel(logger.INFO)
+    logger.getLogger('').addHandler(console)
 
     logger.info("******************* Running Autofill Tool *******************")
 
