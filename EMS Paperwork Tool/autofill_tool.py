@@ -39,6 +39,7 @@ class EMS:
         self.year = str(year)
         self.month = str(month)
         self.day = str(day)
+        self.weekday = datetime.date(year, month, day).weekday()
 
         self.setup_ems()
 
@@ -736,8 +737,14 @@ class EMS:
         Returns:
             setup_time (datetime.datetime): time to setup for event
         """
-        if self.compare_times(self.convert_time_to_datetime(
-                settings["previous_day_setup_cutoff"]), event_start_time) == 1:
+        if self.weekday == 5 or self.weekday == 6:  # date.weekday() 0: Mon, 6: Sun
+            cutoff_time = settings["late_open_previous_day_setup_cutoff"]
+        else:
+            cutoff_time = settings["previous_day_setup_cutoff"]
+
+        self.logger.debug("Cutoff time is {}".format(cutoff_time))
+
+        if self.compare_times(self.convert_time_to_datetime(cutoff_time), event_start_time) == 1:
             return datetime.datetime.strptime("2016/1/1 " + settings["setup_time_night_before"], "%Y/%m/%d %I:%M %p")
 
         time_delta = datetime.timedelta(minutes=settings["minutes_to_advance_setup"])

@@ -9,6 +9,7 @@
     "minutes_to_advance_checkin": 15,
     "minutes_to_delay_teardown": 30,
     "previous_day_setup_cutoff": "10:00 AM",
+    "late_open_previous_day_setup_cutoff": "12:00 PM",
     "setup_time_night_before": "12:00 AM",
     "use_w2w": true,
     "custom_date": false,
@@ -18,8 +19,8 @@
     "skip_rooms": true,
     "manager_position": "Student Manager - AV",
     "order_to_assign_general_shift":
-        ["AV Student Manager",
-         "AV Shift Lead",
+        ["AV Shift Lead",
+         "AV Student Manager",
          "AV Technician"
         ],
     "skip_following_rooms":
