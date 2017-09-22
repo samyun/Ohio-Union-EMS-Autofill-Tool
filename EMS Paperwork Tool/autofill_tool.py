@@ -463,10 +463,10 @@ class EMS:
             return {"last_name": "{Unassigned}", "first_name": "{Unassigned}"}
         else:
             self.logger.info("Time '{0}' has worker '{1}, '{2}'".format(time_dt.strftime("%H:%M"),
-                                                                         ending_shift["last_name"],
-                                                                         ending_shift["first_name"]))
+                                                                        ending_shift["last_name"],
+                                                                        ending_shift["first_name"]))
             return {"last_name": ending_shift["last_name"], "first_name": ending_shift["first_name"]}
-        # Managers only?
+            # Managers only?
 
     def find_setup_info(self, event_start_time):
         """ Given an event start time, find the correct person to setup the event
