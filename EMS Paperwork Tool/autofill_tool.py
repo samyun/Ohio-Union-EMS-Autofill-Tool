@@ -41,6 +41,8 @@ class EMS:
         self.day = str(day)
         self.weekday = datetime.date(year, month, day).weekday()
 
+        self.workers = dict()
+
         self.setup_ems()
 
     # region Selenium wrappers
@@ -284,20 +286,6 @@ class EMS:
         # get event name
         event_name = self.wait_for_element_visible("h3").text
 
-        # check event has AV
-        try:
-            if self.wait_for_element_visible(".div_right_column > h5:nth-of-type(1)").text == "A/V Equipment":
-                av_equipment = self.wait_for_presence_of_all_elements(".div_right_column > ul:nth-of-type(1) > li")
-                if av_equipment[0].text == "None Found":
-                    self.logger.info("Event '{}' has no AV".format(event_name))
-                    return
-            else:
-                self.logger.warning("For event '{}', first <h5> is not 'A/V Equipment'")
-                return
-        except TimeoutException:
-            self.logger.warning("For event '{}', timed out")
-            return
-
         # check if event is already scheduled -> refresh js links
         if settings["skip_already_scheduled"]:
             table = self.wait_for_element_visible("#ctl00_ContentPlaceHolder1_dg_staff_assignments")
@@ -310,8 +298,8 @@ class EMS:
                     return True
 
         # check if event is a room that should be skipped -> refresh js links
+        full_room_name = self.wait_for_element_visible("#spRoom").text
         if settings["skip_rooms"]:
-            full_room_name = self.wait_for_element_visible("#spRoom").text
             self.logger.info("For event '{0}', in room '{1}', checking if room should be skipped"
                              .format(event_name, full_room_name))
             for name in settings["skip_following_rooms"]:
@@ -319,6 +307,41 @@ class EMS:
                     self.logger.info("Event '{0}' is in room '{1}' that should be skipped. Need to refresh links"
                                      .format(event_name, name))
                     return True
+
+        av_equipments = []
+        notes = []
+        # check event has AV
+        if settings["skip_checking_for_av"] is False:
+            try:
+                # get AV equipment in Notes
+                i = 1
+                for h5 in self.wait_for_presence_of_all_elements(".div_right_column > h5"):
+                    if h5.text == "Setup Notes":
+                        for note in self.wait_for_presence_of_all_elements(
+                                                ".div_right_column > ul:nth-of-type(" + str(i) + ") > li"):
+                            notes.append(note.text)
+                    elif h5.text == "A/V Equipment":
+                        for av_equipment in self.wait_for_presence_of_all_elements(
+                                                ".div_right_column > ul:nth-of-type(" + str(i) + ") > li"):
+                            av_equipments.append(av_equipment.text)
+                    i += 1
+
+                self.logger.debug("A/V Equipment: {}".format(av_equipments))
+                self.logger.debug("Setup Notes: {}".format(notes))
+                if settings["skip_events_with_no_av"] is True:
+                    if av_equipments[0] == "None Found":
+                        if len(notes) == 1 and notes[0] == "None Found" or "o be placed under" in notes[0]:
+                            self.logger.info("Event '{}' has no AV".format(event_name))
+                            return
+            except TimeoutException:
+                self.logger.warning("For event '{}', timed out".format(event_name))
+                return
+
+        # append Setup Notes to av_equipments
+        if len(notes) >= 1 and notes[0] != "None Found":
+            if av_equipments[0] == "None Found":
+                del(av_equipments[0])
+            av_equipments.append(notes)
 
         # get the time for the event and parse it
         time_for_event = self.wait_for_element_visible("#spRunTime").text
@@ -351,6 +374,64 @@ class EMS:
         self.assign_checkin(checkin_person, checkin_time)
         self.assign_teardown(teardown_person, teardown_time)
         self.logger.info("Event '{}' scheduled successfully".format(event_name))
+
+        # populate self.workers for report
+        setup_dict = self.return_assignment_dict("Setup",
+                                                 setup_time,
+                                                 full_room_name,
+                                                 event_name,
+                                                 av_equipments)
+        checkin_dict = self.return_assignment_dict("Check-in",
+                                                   checkin_time,
+                                                   full_room_name,
+                                                   event_name,
+                                                   av_equipments)
+        teardown_dict = self.return_assignment_dict("Teardown",
+                                                    teardown_time,
+                                                    full_room_name,
+                                                    event_name,
+                                                    av_equipments)
+        self.insert_assignment_to_workers(setup_person, setup_dict)
+        self.insert_assignment_to_workers(checkin_person, checkin_dict)
+        self.insert_assignment_to_workers(teardown_person, teardown_dict)
+
+    def insert_assignment_to_workers(self, person, assignment):
+        """ Inserts assignment to person in self.workers
+
+        Args:
+            person (str)
+            assignment (dict)
+        """
+        if person in self.workers.keys():
+            self.workers[person].append(assignment)
+        else:
+            self.workers[person] = [assignment]
+
+    def return_assignment_dict(self, assign_type, assign_time, room, event_name, equipment):
+        """ Returns dict with:
+            {
+                "AssignmentType": assign_type,
+                "Time": assign_time,
+                "Room": room,
+                "EventName": event_name,
+                "Equipment": equipment
+            }
+        Args:
+            assign_type (str)
+            assign_time (str)
+            room (str)
+            event_name (str)
+            equipment (list)
+        """
+        return_dict = {
+            "AssignmentType": assign_type,
+            "Time": assign_time,
+            "Room": room,
+            "EventName": event_name,
+            "Equipment": equipment
+        }
+        self.logger.debug("returning assignment dict: {}".format(return_dict))
+        return return_dict
 
     def enter_assignment(self, person, time_to_enter, assignment):
         """ From the event details page, enters the staff assignments, submit,
@@ -1247,6 +1328,24 @@ try:
                 ems.navigate_to_event_listing_page(select_position=False)
                 redo = True
                 break
+
+    # generate assignment report
+    if settings["generate_report"] is True:
+        headers = ["Time",
+                   "AssignmentType",
+                   "Room",
+                   "EventName"]
+        outFile = open("AV Assignments {}.txt".format(str(year)+"-"+str(month)+"-"+str(day)), "w")
+        for key, values in ems.workers.items():
+            outFile.write(key + '\n\t')
+            for value in values:
+                for header in headers:
+                    outFile.write(value[header] + '\t')
+                for equipment in value["Equipment"]:
+                    outFile.write(equipment + '\n')
+                    for i in range(len(headers)):
+                        outFile.write('\t\t')
+
 
 finally:
     driver.quit()
