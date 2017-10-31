@@ -341,7 +341,7 @@ class EMS:
         if len(notes) >= 1 and notes[0] != "None Found":
             if av_equipments[0] == "None Found":
                 del(av_equipments[0])
-            av_equipments.append(notes)
+            av_equipments += notes
 
         # get the time for the event and parse it
         time_for_event = self.wait_for_element_visible("#spRunTime").text
@@ -1329,22 +1329,41 @@ try:
                 redo = True
                 break
 
+    with open("file.json", "w+") as fp:
+        json.dump(ems.workers, fp)
+
     # generate assignment report
     if settings["generate_report"] is True:
-        headers = ["Time",
-                   "AssignmentType",
-                   "Room",
-                   "EventName"]
+        headers = [("Time", 10),
+                   ("AssignmentType", 10),
+                   ("Room", 25),
+                   ("EventName", 30)]
         outFile = open("AV Assignments {}.txt".format(str(year)+"-"+str(month)+"-"+str(day)), "w")
-        for key, values in ems.workers.items():
-            outFile.write(key + '\n\t')
-            for value in values:
+        for worker_name, assignments in ems.workers.items():
+            outFile.write(worker_name + '\n    ')
+            for assignment in assignments:
+                pad = 4
                 for header in headers:
-                    outFile.write(value[header] + '\t')
-                for equipment in value["Equipment"]:
-                    outFile.write(equipment + '\n')
-                    for i in range(len(headers)):
-                        outFile.write('\t\t')
+                    outFile.write(assignment[header[0]].ljust(header[1])[:header[1]] + ' | ')
+                    pad += header[1] + 3
+                num_equip = len(assignment["Equipment"])
+                equipment_iteration = 1
+                for equipment in assignment["Equipment"]:
+                    split_iteration = 1
+                    splits = equipment.split('\n')
+                    for split in splits:
+                        outFile.write(split)
+                        outFile.write('\n')
+                        if split_iteration < len(splits):
+                            outFile.write(''.ljust(pad + 4))
+                            split_iteration += 1
+                        elif equipment_iteration < num_equip:
+                            outFile.write(''.ljust(pad))
+                            split_iteration += 1
+                        else:
+                            outFile.write("    ")
+                    equipment_iteration += 1
+            outFile.write("\n")
 
 
 finally:
