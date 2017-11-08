@@ -1336,8 +1336,8 @@ try:
     if settings["generate_report"] is True:
         headers = [("Time", 10),
                    ("AssignmentType", 10),
-                   ("Room", 25),
-                   ("EventName", 30)]
+                   ("Room", 35),
+                   ("EventName", 35)]
         outFile = open("AV Assignments {}.txt".format(str(year)+"-"+str(month)+"-"+str(day)), "w")
         for worker_name, assignments in ems.workers.items():
             outFile.write(worker_name + '\n    ')
@@ -1347,22 +1347,21 @@ try:
                     outFile.write(assignment[header[0]].ljust(header[1])[:header[1]] + ' | ')
                     pad += header[1] + 3
                 num_equip = len(assignment["Equipment"])
-                equipment_iteration = 1
+                equipment_iteration = 0
                 for equipment in assignment["Equipment"]:
                     split_iteration = 1
                     splits = equipment.split('\n')
                     for split in splits:
-                        outFile.write(split)
                         outFile.write('\n')
-                        if split_iteration < len(splits):
-                            outFile.write(''.ljust(pad + 4))
-                            split_iteration += 1
-                        elif equipment_iteration < num_equip:
-                            outFile.write(''.ljust(pad))
+                        if split_iteration == 1:
+                            outFile.write(''.ljust(11))
                             split_iteration += 1
                         else:
-                            outFile.write("    ")
+                            outFile.write(''.ljust(15))
+                            split_iteration += 1
+                        outFile.write(split)
                     equipment_iteration += 1
+                outFile.write("\n\n    ")
             outFile.write("\n")
 
 
