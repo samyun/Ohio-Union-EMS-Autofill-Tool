@@ -45,6 +45,16 @@ class EMS:
 
         self.setup_ems()
 
+    def sort_workers(self):
+        """ For each worker, sorts assignment dicts by DateTime key """
+        tmp_workers = dict()
+        for worker_name in self.workers:
+            worker = self.workers[worker_name]
+            sorted_worker = sorted(worker, key=lambda w: w["DateTime"])
+            tmp_workers[worker_name] = sorted_worker
+        self.workers = tmp_workers
+
+
     # region Selenium wrappers
     def wait_for_element_visible(self, css_selector, timeout=30, raise_exception=True):
         """ Waits for the element to be visible. Defaults to waiting 30s
@@ -354,9 +364,9 @@ class EMS:
 
         # get assignment info
         try:
-            setup_person, setup_time = self.find_setup_info(event_start_dt)
-            checkin_person, checkin_time = self.find_checkin_info(event_start_dt)
-            teardown_person, teardown_time = self.find_teardown_info(event_end_dt)
+            setup_person, setup_time, setup_dt = self.find_setup_info(event_start_dt)
+            checkin_person, checkin_time, checkin_dt = self.find_checkin_info(event_start_dt)
+            teardown_person, teardown_time, teardown_dt = self.find_teardown_info(event_end_dt)
             self.logger.info("For event '{0}', setup: '{1}' @ '{2}' checkin: '{3}' @ '{4} teardown: '{5}' @ '{6}'"
                              .format(event_name,
                                      setup_person,
@@ -378,16 +388,19 @@ class EMS:
         # populate self.workers for report
         setup_dict = self.return_assignment_dict("Setup",
                                                  setup_time,
+                                                 setup_dt,
                                                  full_room_name,
                                                  event_name,
                                                  av_equipments)
         checkin_dict = self.return_assignment_dict("Check-in",
                                                    checkin_time,
+                                                   checkin_dt,
                                                    full_room_name,
                                                    event_name,
                                                    av_equipments)
         teardown_dict = self.return_assignment_dict("Teardown",
                                                     teardown_time,
+                                                    teardown_dt,
                                                     full_room_name,
                                                     event_name,
                                                     av_equipments)
@@ -407,11 +420,12 @@ class EMS:
         else:
             self.workers[person] = [assignment]
 
-    def return_assignment_dict(self, assign_type, assign_time, room, event_name, equipment):
+    def return_assignment_dict(self, assign_type, assign_time, assign_dt, room, event_name, equipment):
         """ Returns dict with:
             {
                 "AssignmentType": assign_type,
-                "Time": assign_time,
+                "Time": assign_time
+                "DateTime": assign_dt,
                 "Room": room,
                 "EventName": event_name,
                 "Equipment": equipment
@@ -419,6 +433,7 @@ class EMS:
         Args:
             assign_type (str)
             assign_time (str)
+            assign_dt (datetime.datetime)
             room (str)
             event_name (str)
             equipment (list)
@@ -426,6 +441,7 @@ class EMS:
         return_dict = {
             "AssignmentType": assign_type,
             "Time": assign_time,
+            "DateTime": assign_dt,
             "Room": room,
             "EventName": event_name,
             "Equipment": equipment
@@ -565,24 +581,25 @@ class EMS:
             event_start_time (datetime.datetime): Time the event starts
 
         Returns:
-            setup_info (2-tuple): First element is the name of person (in the
-            format 'Last, First') and second element is the time to assign (in the
-            format '12:00 AM'). If nobody can be assigned to the setup, return "(Unassigned)", "12:00 AM"
+            setup_info (3-tuple): First element is the name of person (in the
+                format 'Last, First') and second element is the time to assign (in the
+                format '12:00 AM'). Third element is dt, for use in report.
+                If nobody can be assigned to the setup, return "(Unassigned)", "12:00 AM"
         """
 
         setup_dt = self.get_setup_time(event_start_time)
         setup_time = self.convert_datetime_to_time(setup_dt)
         if setup_time == settings["setup_time_night_before"]:
             staff = settings["current_manager_last_name"] + ", " + settings["current_manager_first_name"]
-            return staff, setup_time
+            return staff, setup_time, setup_dt
 
         person = self.find_worker_at_time(setup_dt)
 
         if person["last_name"] == "{Unassigned}":
-            return "(Unassigned)", "12:00 AM"
+            return "(Unassigned)", "12:00 AM", datetime.datetime.strptime("2016/1/1 12:00 AM", "%Y/%m/%d %I:%M %p")
         else:
             name = person["last_name"] + ", " + person["first_name"]
-            return name, setup_time
+            return name, setup_time, setup_dt
 
     def find_checkin_info(self, event_start_time):
         """ Given an event start time, find the correct person to check-in the
@@ -599,10 +616,10 @@ class EMS:
             event_start_time (datetime.datetime): Time the event starts (in the format '12:00 AM')
 
         Returns:
-            checkin_info (2-tuple): First element is the name of person (in the
-            format 'Last, First') and second element is the time to assign (in the
-            format '12:00 AM'). If nobody can be assigned to the check-in, return
-            "(Unassigned)", "12:00 AM"
+            checkin_info (3-tuple): First element is the name of person (in the
+                format 'Last, First') and second element is the time to assign (in the
+                format '12:00 AM'). Third element is dt, for use in report.
+                If nobody can be assigned to the setup, return "(Unassigned)", "12:00 AM"
         """
 
         checkin_dt = self.get_checkin_time(event_start_time)
@@ -611,10 +628,10 @@ class EMS:
         person = self.find_worker_at_time(checkin_dt)
 
         if person["last_name"] == "{Unassigned}":
-            return "(Unassigned)", "12:00 AM"
+            return "(Unassigned)", "12:00 AM", datetime.datetime.strptime("2016/1/1 12:00 AM", "%Y/%m/%d %I:%M %p")
         else:
             name = person["last_name"] + ", " + person["first_name"]
-            return name, checkin_time
+            return name, checkin_time, checkin_dt
 
     def find_teardown_info(self, event_end_time):
         """ Given an event end time, find the correct person to teardown the
@@ -631,10 +648,10 @@ class EMS:
             event_end_time (datetime.datetime): Time the event ends (in the format '12:00 AM')
 
         Returns:
-            teardown_info (2-tuple): First element is the name of person (in the
-            format 'Last, First') and second element is the time to assign (in the
-            format '12:00 AM'). If nobody can be assigned to the teardown, return
-            "(Unassigned)", "12:00 AM"
+            teardown_info (3-tuple): First element is the name of person (in the
+                format 'Last, First') and second element is the time to assign (in the
+                format '12:00 AM'). Third element is dt, for use in report.
+                If nobody can be assigned to the setup, return "(Unassigned)", "12:00 AM"
         """
 
         teardown_dt = self.get_teardown_time(event_end_time)
@@ -643,10 +660,10 @@ class EMS:
         person = self.find_worker_at_time(teardown_dt)
 
         if person["last_name"] == "{Unassigned}":
-            return "(Unassigned)", "12:00 AM"
+            return "(Unassigned)", "12:00 AM", datetime.datetime.strptime("2016/1/1 12:00 AM", "%Y/%m/%d %I:%M %p")
         else:
             name = person["last_name"] + ", " + person["first_name"]
-            return name, teardown_time
+            return name, teardown_time, teardown_dt
 
     def parse_time(self, time_to_parse):
         """ Parse a time in the format '12:00 AM' into three parts: hour, minute,
@@ -1329,8 +1346,19 @@ try:
                 redo = True
                 break
 
-    with open("file.json", "w+") as fp:
-        json.dump(ems.workers, fp)
+
+    def datetime_handler(x):
+        if isinstance(x, datetime.datetime):
+            return x.isoformat()
+        raise TypeError("Unknown type")
+
+    with open("file_unsorted.json", "w+") as fp:
+        json.dump(ems.workers, fp, default=datetime_handler)
+
+    ems.sort_workers()
+
+    with open("file_sorted.json", "w+") as fp:
+        json.dump(ems.workers, fp, default=datetime_handler)
 
     # generate assignment report
     if settings["generate_report"] is True:
