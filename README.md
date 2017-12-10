@@ -1,7 +1,7 @@
 # Ohio Union EMS Autofill Tool
 
 This is a tool to auto-fill the EMS paperwork for the Ohio Union AV managers. This tool is provided as-is and is under
-active development.
+no longer under active development, due to graduation.
 
 ## Table of Contents
 * [Installation](#installation)
@@ -174,6 +174,8 @@ such as Production, but it is not tested.
  - ems_password: OSU password
  - w2w_username: WhenToWork username
  - w2w_password: WhenToWork password
+ - use_w2w_manager_for_previous_day_setup: true to use the AV Manager for the previous evening for previous day
+    setups, false to use "current_manager_first_name".
  - minutes_to_advance_setup: Amount of time prior to the event start time that setup should be scheduled. e.g: If
     event starts at 5:00 PM, "minutes_to_advance_setup" = 30 means setup time is 4:30 PM.
  - minutes_to_advance_checkin: Amount of time prior to the event start time that check-in should be scheduled. e.g: If
@@ -183,6 +185,7 @@ such as Production, but it is not tested.
  - previous_day_setup_cutoff: The cut-off time to schedule the setup for the previous night. e.g.: If the cut-off time
     if 10:00 AM, an event that starts at 9:45 AM would be setup the night prior at "setup_time_night_before" time
     by "current_manager_last_name", "current_manager_first_name".
+ - late_open_previous_day_setup_cutoff: The cut-off time to schedule the setup for the previous night on late opens
  - setup_time_night_before: The time to setup the event if it's set up the night prior. e.g: If the event starts
     prior to the "previous_day_setup_cutoff", and "setup_time_night_before" = 12:00 AM, the setup would be
     scheduled at 12:00 AM.
@@ -192,6 +195,7 @@ such as Production, but it is not tested.
     to schedule those anyways. NB: if this is set to false, it will add the schedules, even if they already exist.
  - skip_already_confirmed: true to skip events where the setup, check-in, or teardown are already scheduled. false to
     schedule those events anyways.
+ - skip_checking_for_av: true to skip checking for AV equipment, false to check for AV equipment
  - skip_events_with_no_av: true to schedule events where the "A/V Equipment" section is "None Found". false to
     schedule those events anyways.
  - skip_rooms: true to skip events that are in one of the rooms in "skip_following_rooms". false to schedule those

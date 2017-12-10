@@ -5,6 +5,7 @@
     "ems_password": "OhioUnion1",
     "w2w_username": "buckeye.1",
     "w2w_password": "OhioUnion1",
+    "use_w2w_manager_for_previous_day_setup": true,
     "minutes_to_advance_setup": 30,
     "minutes_to_advance_checkin": 15,
     "minutes_to_delay_teardown": 30,
@@ -23,6 +24,11 @@
     "order_to_assign_general_shift":
         ["AV Shift Lead",
          "AV Student Manager",
+         "AV Technician"
+        ],
+    "order_to_assign_previous_evening_general_shift":
+        ["AV Student Manager",
+         "AV Shift Lead",
          "AV Technician"
         ],
     "skip_following_rooms":

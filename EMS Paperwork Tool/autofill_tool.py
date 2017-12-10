@@ -3,7 +3,7 @@ Ohio Union EMS Autofill Tool
 Copyright (c) 2017 Samuel Yun
 
 This is a tool to auto-fill the EMS paperwork for the Ohio Union AV managers.
-This tool is provided as-is and is under active development.
+This tool is provided as-is and is no longer under active development.
 
 INSTRUCTIONS:
  - edit settings.json with your information
@@ -32,10 +32,11 @@ settings = dict()
 class EMS:
     """ Contains functions related to EMS """
 
-    def __init__(self, selenium_webdriver, logging, schedule, year, month, day):
+    def __init__(self, selenium_webdriver, logging, schedule, previous_night_worker, year, month, day):
         self.driver = selenium_webdriver
         self.logger = logging
         self.schedule = schedule
+        self.previous_night_worker = previous_night_worker
         self.year = str(year)
         self.month = str(month)
         self.day = str(day)
@@ -540,7 +541,7 @@ class EMS:
                                         "last_name": worker["last_name"],
                                         "first_name": worker["first_name"],
                                         "position": shift_position}
-                    elif self.compare_times(end_time, ending_shift["end_time"]) < 0:
+                    elif self.compare_times(end_time, ending_shift["end_time"]) > 0:
                         self.logger.debug("   Worker is possibly the last worker of the night")
                         ending_shift = {"end_time": end_time,
                                         "last_name": worker["last_name"],
@@ -590,7 +591,7 @@ class EMS:
         setup_dt = self.get_setup_time(event_start_time)
         setup_time = self.convert_datetime_to_time(setup_dt)
         if setup_time == settings["setup_time_night_before"]:
-            staff = settings["current_manager_last_name"] + ", " + settings["current_manager_first_name"]
+            staff = self.previous_night_worker
             return staff, setup_time, setup_dt
 
         person = self.find_worker_at_time(setup_dt)
@@ -974,8 +975,14 @@ class W2W:
     def return_year(self):
         return self.year
 
-    def go_to_w2w_with_date(self):
+    def go_to_w2w_with_date(self, d, m, y, name_dt):
         """ Go to WhenToWork and go to the correct day. Returns the column number corresponding to the correct day
+
+        Args:
+            d (int): day
+            m (int): month
+            y (int): year
+            name_dt (str): name_date
 
         Returns:
             int: The column number corresponding to the date. Starts at zero.
@@ -1002,7 +1009,7 @@ class W2W:
         self.driver.execute_script("ReplWin('empfullschedule','')")
 
         # go to date
-        url_with_date = self.driver.current_url + "&Date={0}/{1}/{2}".format(month, day, year)
+        url_with_date = self.driver.current_url + "&Date={0}/{1}/{2}".format(m, d, y)
         self.driver.get(url_with_date)
 
         # Get correct column number by date
@@ -1013,7 +1020,7 @@ class W2W:
         column_num = 0
         for x in tds:
             try:
-                x.find_element_by_partial_link_text(name_date)
+                x.find_element_by_partial_link_text(name_dt)
                 column_num = i
                 break
             except SeleniumExceptions.NoSuchElementException:
@@ -1173,64 +1180,36 @@ def setup():
         raise RuntimeError("Error reading settings.json.")
 
 
-def get_date():
-    """ Gets the date, ensures it's a valid date, asks for confirmation, and returns the parsed date. Requires
-        date is in 'M/D/YYYY' format.
+def parse_date(dt):
+    """ Takes datetime.datetime and returns Y M D as ints
 
-   Return:
+    Args:
+        dt (datetime.datetime): datetime
+
+    Returns:
+        int: year
+        int: month
+        int: day
+    """
+    date_list = dt.strftime("%m/%d/%Y").split("/")
+    month = int(date_list[0])
+    day = int(date_list[1])
+    year = int(date_list[2])
+
+    return year, month, day
+
+
+def get_string_date(input_month, input_day):
+    """ Takes month and day and puts in form MMM-D, such as 'Jan-1'
+
+    Args:
+        input_month (int): Input month
+        input_day (int): Input day
+
+    Return:
        str: String date, in the form of 'Jan-1"
-       int: Year, in form 'YYYY'
-       int: Month, in form 'M'
-       int: Day, in form 'D'
 
     """
-
-    # prompt date
-    valid_date = 0
-    input_month = 0
-    input_day = 0
-    input_year = 0
-    tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
-
-    if settings["custom_date"] is False:
-        date_list = tomorrow.strftime("%m/%d/%Y").split("/")
-        input_month = int(date_list[0])
-        input_day = int(date_list[1])
-        input_year = int(date_list[2])
-    else:
-        while not valid_date:
-            try:
-                print("Enter date (eg {0} = \"{1}\").".format(tomorrow.strftime("%B %d %Y"), tomorrow.strftime("%m/%d/%Y")))
-                input_date = input("Press enter to use {}: ".format(tomorrow.strftime("%B %d %Y")))
-
-                if input_date != "":
-                    # parse date
-                    date_list = input_date.split("/")
-                    input_month = int(date_list[0])
-                    input_day = int(date_list[1])
-                    input_year = int(date_list[2])
-                    if input_month < 1 or input_month > 12:
-                        print("Invalid month: {}".format(input_month))
-                    elif input_day < 1 or input_day > 31:
-                        print("Invalid day: {}".format(input_day))
-                    elif input_year < 0 or input_year > 2099 or 99 < input_year < 2000:
-                        print("Invalid year: {}".format(input_year))
-                    else:
-                        # if two digit year, convert to 4 digit year.
-                        if input_year < 2000:
-                            input_year += 2000
-                        valid_date = 1
-                else:
-                    input_month = tomorrow.month
-                    input_day = tomorrow.day
-                    input_year = tomorrow.year
-                    valid_date = 1
-
-                print("Using {0}/{1}/{2}".format(input_month, input_day, input_year))
-
-            except (RuntimeError, ValueError):
-                print("Invalid date entry")
-
     if input_month == 1:
         name_month = "Jan"
     elif input_month == 2:
@@ -1258,7 +1237,68 @@ def get_date():
     else:
         raise RuntimeError("Unknown input month. Error parsing? '{}'".format(input_month))
 
-    return str(name_month) + "-" + str(input_day), input_year, input_month, input_day
+    return str(name_month) + "-" + str(input_day)
+
+
+def read_and_validate_date():
+    """ Gets the date, ensures it's a valid date, asks for confirmation, and returns the parsed date. Requires
+        date is in 'M/D/YYYY' format.
+
+    Return:
+       int: Year, in form 'YYYY'
+       int: Month, in form 'M'
+       int: Day, in form 'D'
+       datetime.datetime: Date as a datetime
+
+    Raises:
+        RuntimeError: Errors parsing input
+    """
+    valid_date = False
+    input_m = 0
+    input_d = 0
+    input_y = 0
+    tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+    dt = tomorrow
+
+    while not valid_date:
+        try:
+            print("Enter date (eg {0} = \"{1}\").".format(tomorrow.strftime("%B %d %Y"), tomorrow.strftime("%m/%d/%Y")))
+            input_date = input("Press enter to use {}: ".format(tomorrow.strftime("%B %d %Y")))
+
+            if input_date != "":
+                # parse date
+                date_list = input_date.split("/")
+                input_m = int(date_list[0])
+                input_d = int(date_list[1])
+                input_y = int(date_list[2])
+                if input_m < 1 or input_m > 12:
+                    print("Invalid month: {}".format(input_m))
+                elif input_d < 1 or input_d > 31:
+                    print("Invalid day: {}".format(input_d))
+                elif input_y < 0 or input_y > 2099 or 99 < input_y < 2000:
+                    print("Invalid year: {}".format(input_y))
+                else:
+                    # if two digit year, convert to 4 digit year.
+                    if input_y < 2000:
+                        input_y += 2000
+                    valid_date = True
+            else:
+                input_m = tomorrow.month
+                input_d = tomorrow.day
+                input_y = tomorrow.year
+                valid_date = True
+
+            date_str = "{0}/{1}/{2}".format(input_m, input_d, input_y)
+            dt = datetime.datetime.strptime(date_str, "%m/%d/%Y")
+            print("Using {}".format(date_str))
+
+        except (RuntimeError, ValueError):
+            print("Invalid date entry")
+
+    return input_y, input_m, input_d, dt
+
+
+
 
 
 def parse_schedule_file(log):
@@ -1289,71 +1329,23 @@ def parse_schedule_file(log):
     return schedule_dict
 
 
-# Get the web driver
-driver = webdriver.Chrome()
-
-try:
-    # Setup environment
-    setup()
-
-    # get date information
-    name_date, year, month, day = get_date()
-
-    schedule = {}
-
-    if settings["use_w2w"] is True:
-        # create W2W object
-        w2w = W2W(driver, logger)
-
-        # go to w2w and load schedule
-        col_num = w2w.go_to_w2w_with_date()
-        for position in settings["order_to_assign_general_shift"]:
-            w2w.go_to_position_type(position)
-            parsed_list = w2w.get_list_of_schedule(col_num)
-            schedule[position] = parsed_list
-    else:
-        schedule = parse_schedule_file(logger)
-
-    ems = EMS(driver, logger, schedule, year, month, day)
-
-    # get list of events
-    list_of_events = ems.get_list_of_events()
-
-    # get list of javascript commands
-    list_of_javascript = ems.get_list_of_javascript(list_of_events)
-
-    # go to event and schedule
-    redo = False
-    for command in list_of_javascript:
-        redo = ems.schedule_event(command)
-        if redo is None:
-            redo = False
-        else:
-            ems.navigate_to_event_listing_page(select_position=False)
-            redo = True
-            break
-
-    # if need to redo, refresh JS list and continue.
-    while redo is True:
-        list_of_events = ems.get_list_of_events()
-        list_of_javascript = ems.get_list_of_javascript(list_of_events)
-        for command in list_of_javascript:
-            redo = ems.schedule_event(command)
-            if redo is None:
-                redo = False
-            else:
-                ems.navigate_to_event_listing_page(select_position=False)
-                redo = True
-                break
+def datetime_handler(x):
+    if isinstance(x, datetime.datetime):
+        return x.isoformat()
+    raise TypeError("Unknown type")
 
 
-    def datetime_handler(x):
-        if isinstance(x, datetime.datetime):
-            return x.isoformat()
-        raise TypeError("Unknown type")
+def generate_report(ems):
+    """ Generates report. Takes EMS object which contains scheduled workers and equipment, sorts the workers, saves
+    a JSON file with the workers, and generates a report.
 
-    with open("file_unsorted.json", "w+") as fp:
-        json.dump(ems.workers, fp, default=datetime_handler)
+    Args:
+        ems (EMS): EMS object
+
+    Outputs:
+        file_sorted.json
+        AV Assignments {date}.txt
+    """
 
     ems.sort_workers()
 
@@ -1392,6 +1384,90 @@ try:
                 outFile.write("\n\n    ")
             outFile.write("\n")
 
+
+# Get the web driver
+driver = webdriver.Chrome()
+
+try:
+    # Setup environment
+    setup()
+
+    # get date information
+    if settings["custom_date"] is False:
+        dt = datetime.datetime.now() + datetime.timedelta(days=1)
+        year, month, day = parse_date(dt)
+    else:
+        year, month, day, dt = read_and_validate_date()
+
+    name_date = get_string_date(month, day)
+
+    schedule = {}
+    previous_evening_worker = settings["current_manager_last_name"] + ", " + settings["current_manager_first_name"]
+
+    if settings["use_w2w"] is True:
+        # create W2W object
+        w2w = W2W(driver, logger)
+
+        # go to w2w and load schedule
+        col_num = w2w.go_to_w2w_with_date(day, month, year, name_date)
+        for position in settings["order_to_assign_general_shift"]:
+            w2w.go_to_position_type(position)
+            parsed_list = w2w.get_list_of_schedule(col_num)
+            schedule[position] = parsed_list
+
+        # parse current manager if use_w2w_manager_for_previous_day_setup is true
+        if settings["use_w2w_manager_for_previous_day_setup"] is True:
+            previous_evening_schedule = []
+            previous_dt = dt - datetime.timedelta(days=1)
+            prev_yr, prev_mo, prev_day = parse_date(previous_dt)
+            prev_date_str = get_string_date(prev_mo, prev_day)
+            prev_col_num = w2w.go_to_w2w_with_date(prev_day, prev_mo, prev_yr, prev_date_str)
+            for position in settings["order_to_assign_previous_evening_general_shift"]:
+                if "Manager" in position:
+                    w2w.go_to_position_type(position)
+                    previous_evening_schedule = w2w.get_list_of_schedule(prev_col_num)
+                    break
+
+            if len(previous_evening_schedule) != 0:
+                previous_evening_worker = previous_evening_schedule[-1]["last_name"] + ", " + \
+                                          previous_evening_schedule[-1]["first_name"]
+
+    else:
+        schedule = parse_schedule_file(logger)
+
+    ems = EMS(driver, logger, schedule, previous_evening_worker, year, month, day)
+
+    # get list of events
+    list_of_events = ems.get_list_of_events()
+
+    # get list of javascript commands
+    list_of_javascript = ems.get_list_of_javascript(list_of_events)
+
+    # go to event and schedule
+    redo = False
+    for command in list_of_javascript:
+        redo = ems.schedule_event(command)
+        if redo is None:
+            redo = False
+        else:
+            ems.navigate_to_event_listing_page(select_position=False)
+            redo = True
+            break
+
+    # if need to redo, refresh JS list and continue.
+    while redo is True:
+        list_of_events = ems.get_list_of_events()
+        list_of_javascript = ems.get_list_of_javascript(list_of_events)
+        for command in list_of_javascript:
+            redo = ems.schedule_event(command)
+            if redo is None:
+                redo = False
+            else:
+                ems.navigate_to_event_listing_page(select_position=False)
+                redo = True
+                break
+
+    generate_report(ems)
 
 finally:
     driver.quit()
