@@ -1013,7 +1013,7 @@ class W2W:
         self.driver.get(url_with_date)
 
         # Get correct column number by date
-        date_row_xpath = "/html/body/div[4]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[1]/tbody/tr"
+        date_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[1]/tbody/tr"
         date_row = self.driver.find_element_by_xpath(date_row_xpath)
         tds = date_row.find_elements_by_tag_name("td")
         i = 0
@@ -1089,7 +1089,7 @@ class W2W:
                     "end_time"
         """
 
-        data_row_xpath = "/html/body/div[4]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
+        data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
         list_of_rows = self.driver.find_elements_by_xpath(data_row_xpath)
         list_of_cells = list_of_rows[1].find_elements_by_tag_name("td")
         cell = list_of_cells[column_number]
