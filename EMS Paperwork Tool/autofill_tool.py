@@ -1015,10 +1015,12 @@ class W2W:
         # Get correct column number by date
         date_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[1]/tbody/tr"
         date_row = self.driver.find_element_by_xpath(date_row_xpath)
-        tds = date_row.find_elements_by_tag_name("td")
+        ths = date_row.find_elements_by_tag_name("th")
+        if len(ths) == 0:
+            raise RuntimeError("While crawling for date column header, unable to find any elements 'th'.")
         i = 0
         column_num = 0
-        for x in tds:
+        for x in ths:
             try:
                 x.find_element_by_partial_link_text(name_dt)
                 column_num = i
@@ -1092,6 +1094,8 @@ class W2W:
         data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
         list_of_rows = self.driver.find_elements_by_xpath(data_row_xpath)
         list_of_cells = list_of_rows[1].find_elements_by_tag_name("td")
+        if len(list_of_cells) == 0:
+            raise RuntimeError("While crawling for list of cells, unable to find any elements with tag 'td'.")
         cell = list_of_cells[column_number]
 
         raw_list = cell.text.split("\n")
