@@ -1,6 +1,6 @@
 """
 Ohio Union EMS Autofill Tool
-Copyright (c) 2017 Samuel Yun
+Copyright (c) 2018 Samuel Yun
 
 This is a tool to auto-fill the EMS paperwork for the Ohio Union AV managers.
 This tool is provided as-is and is no longer under active development.
@@ -1091,8 +1091,11 @@ class W2W:
                     "end_time"
         """
 
-        data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
+        #data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
+        data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table/tbody/tr"
         list_of_rows = self.driver.find_elements_by_xpath(data_row_xpath)
+        if len(list_of_rows) == 0:
+            raise RuntimeError("While crawling for list of rows, unable to find any elements with xpath '{0}'.", data_row_xpath)
         list_of_cells = list_of_rows[1].find_elements_by_tag_name("td")
         if len(list_of_cells) == 0:
             raise RuntimeError("While crawling for list of cells, unable to find any elements with tag 'td'.")
@@ -1370,7 +1373,6 @@ def generate_report(ems):
                 for header in headers:
                     outFile.write(assignment[header[0]].ljust(header[1])[:header[1]] + ' | ')
                     pad += header[1] + 3
-                num_equip = len(assignment["Equipment"])
                 equipment_iteration = 0
                 for equipment in assignment["Equipment"]:
                     split_iteration = 1
