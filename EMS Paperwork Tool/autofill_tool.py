@@ -1091,7 +1091,6 @@ class W2W:
                     "end_time"
         """
 
-        #data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr"
         data_row_xpath = "/html/body/div[5]/table[2]/tbody/tr[2]/td/table/tbody/tr/td/table/tbody/tr"
         list_of_rows = self.driver.find_elements_by_xpath(data_row_xpath)
         if len(list_of_rows) == 0:
