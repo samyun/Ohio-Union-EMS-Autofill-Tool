@@ -1001,7 +1001,7 @@ class W2W:
             input_pass.send_keys(settings["w2w_password"])
             input_pass.submit()
 
-        if self.driver.title == "Sign In - WhenToWork Online Employee Scheduling Program":
+        if self.driver.title == "W2W Sign In - WhenToWork Online Employee Scheduling Program":
             self.logger.exception("Invalid W2W credentials")
             raise RuntimeError("Invalid W2W credentials")
 
@@ -1095,7 +1095,7 @@ class W2W:
         list_of_rows = self.driver.find_elements_by_xpath(data_row_xpath)
         if len(list_of_rows) == 0:
             raise RuntimeError("While crawling for list of rows, unable to find any elements with xpath '{0}'.", data_row_xpath)
-        list_of_cells = list_of_rows[1].find_elements_by_tag_name("td")
+        list_of_cells = list_of_rows[2].find_elements_by_tag_name("td")
         if len(list_of_cells) == 0:
             raise RuntimeError("While crawling for list of cells, unable to find any elements with tag 'td'.")
         cell = list_of_cells[column_number]
