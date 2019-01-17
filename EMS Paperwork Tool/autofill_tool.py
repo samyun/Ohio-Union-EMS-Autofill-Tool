@@ -1106,7 +1106,8 @@ class W2W:
 
         if len(raw_list) > 1:
             while i < len(raw_list):
-                if raw_list[i][:2] == "  ":
+                foo = raw_list[i][:2]
+                if raw_list[i][:2] == "" or raw_list[i][:2].isspace():
                     i += 1
                 else:
                     # parse time
